@@ -152,7 +152,7 @@ so that all the objects are segregated into for manageability purpose:
   EXEC('CREATE SCHEMA \[EXTSQLDW\] AUTHORIZATION dbo;')
   ---------------------------------------------------------------
 
-1.  Create External Table - APS
+####  1.2.3 Create External Table - APS
 
 This is just one sample script to create an external table in APS
 database. Based on configurable parameters set, you can include or
@@ -183,7 +183,7 @@ blob storage under folder specified.
   ) AS SELECT \* FROM AdventureWorksPDW2012.\[dbo\].\[FactInternetSales\];
   -------------------------------------------------------------------------------------
 
-1.  Create External Table – SQL DW
+####  1.2.4 Create External Table – SQL DW
 
 This is just one sample script to create an external table in SQL DW
 database. As you can notice, the framework derives structure of the
@@ -270,7 +270,7 @@ of scripts).
   );
   ------------------------------------------------------------------------------------------------------------------------------------------------
 
-1.  Create Internal Table – ROUND\_ROBIN
+####  1.2.5 Create Internal Table – ROUND\_ROBIN
 
 This is just one sample script to create an internal table in APS
 database. As you can notice, the framework derives structure of the
@@ -307,7 +307,7 @@ distribution type, partitioning, index structure as well.
   ON \[AdventureWorksPDW2012\_dbo\].\[FactInternetSalesRR\];
   ---------------------------------------------------------------------------------------------
 
-1.  Create Internal Table – REPLICATED
+####  1.2.6 Create Internal Table – REPLICATED
 
 As REPLICATED tables are yet not supported in SQL DW, the framework uses
 ROUND\_ROBIN distribution for REPLICATED tables and put a comment inline
@@ -342,7 +342,7 @@ support is available in SQL DW.
   ON \[AdventureWorksPDW2012\_dbo\].\[FactInternetSalesR\];
   --------------------------------------------------------------------------------------------
 
-1.  Create Internal Table – HASH
+####  1.2.7 Create Internal Table – HASH
 
 The framework derives distribution and hash key information from APS
 databases and creates internal tables in SQL DW with the same structure.
@@ -377,7 +377,7 @@ databases and creates internal tables in SQL DW with the same structure.
   ON \[AdventureWorksPDW2012\_dbo\].\[FactInternetSales\];
   -------------------------------------------------------------------------------------------
 
-1.  Create Internal Table – CLUSTERED
+####  1.2.8 Create Internal Table – CLUSTERED
 
 Often tables in APS have clustered columnstore index but few small
 tables might have clustered rowstore index, again the framework derive
@@ -397,28 +397,7 @@ this information from source and creates table accordingly in SQL DW.
   ON \[AdventureWorksPDW2012\_dbo\].\[DimSalesReason\] (\[SalesReasonKey\] ASC)
   -------------------------------------------------------------------------------
 
-1.  Create Non-Clustered Index
-
-Likewise, if an APS table has non-clustered indexes, the framework
-derives that information and creates those non-clustered indexes on
-corresponding SQL DW table as well.
-
-  -------------
-  TOBEUPDATED
-  -------------
-
-1.  Create default constraints
-
-If an APS table has columns with default constraints, the framework
-derives that information and creates those default constraints once SQL
-DW table has been loaded with data, index and statistics have been
-created.
-
-  -------------
-  TOBEUPDATED
-  -------------
-
-1.  Create Statistics
+####  1.2.9 Create Statistics
 
 By default, clustered columnstore index creates statistic on the table
 though if there are additional user created statistics. This framework
@@ -435,7 +414,7 @@ SQL DW table has been loaded with data and index have been created.
   CREATE STATISTICS \[stat\_FactInternetSalesReason\_SalesReasonKey\] ON \[AdventureWorksPDW2012\_dbo\].\[FactInternetSalesReason\] (\[SalesReasonKey\]);
   ---------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-1.  Create Modules
+####  1.2.10 Create Modules
 
 Currently, though, the framework can export scripts for all the modules
 (views, stored procedures, functions) from APS, it cannot be directly
@@ -520,19 +499,14 @@ can be created on SQL DW.
   ![](media/image4.png){width="6.5in" height="0.7472222222222222in"}
   -----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-1.  [[[[[]{#_Toc350951371 .anchor}]{#_Toc299630723
-    .anchor}]{#_Toc240256135 .anchor}]{#_Toc236037187
-    .anchor}]{#_Toc486421943 .anchor}Script Generation Automation
-    Framework
+## 2. Script Generation Automation Framework
 
-    1.  []{#_Toc486421944 .anchor}Exporting Data from APS to Blob
-        Storage
+### 2.1 Exporting Data from APS to Blob Storage
 
 Script file available in attachment can be used for automatically
 generating scripts for creating external tables in APS appliance and
 exporting data to Azure Blob Storage. **ExportToBlob-Part1.dsql**
-generates script for external tables but before execution
-yo[]{#_Hlk478478921 .anchor}u can specify a schema under which all these
+generates script for external tables but before execution you can specify a schema under which all these
 external tables will be created.
 
   -----------------------------------------------------------
@@ -546,13 +520,10 @@ each database as shown below:
 
   -----------------------------------------------------------------
   --step 2: define databases that you want to include
-  
   INSERT INTO DatabasesToInclude VALUES ('AdventureWorksPDW2012')
   -----------------------------------------------------------------
 
 After execution of the above script, output should look like this:
-
-![](media/image5.png){width="6.5in" height="1.867361111111111in"}
 
 Figure 4 - Export - Dynamic Script Generation
 
@@ -573,15 +544,10 @@ example,
 
   -------------------------------------------------------------------------------------------------------------------------
   --step 1: define all parameters
-  
   DECLARE @FormatType VARCHAR(100) = 'DELIMITEDTEXT'
-  
   DECLARE @FieldDelimiter VARCHAR(10) = '\^|\^'
-  
   DECLARE @DateFormat VARCHAR(12) = 'MM/dd/yyyy'
-  
   DECLARE @DataCompression VARCHAR(100) = 'org.apache.hadoop.io.compress.GzipCodec'
-  
   DECLARE @AzureStorageAccount VARCHAR(1000) = 'wasbs://&lt;containername&gt;@&lt;accountname&gt;.blob.core.windows.net/'
   -------------------------------------------------------------------------------------------------------------------------
 
@@ -600,7 +566,6 @@ proper order),
 -   Finally, run all the scripts for creating external tables and
     exporting data to blob storage for that database
 
-![](media/image6.png){width="6.5in" height="2.0416666666666665in"}
 
 Figure 5 - Export - Script Execution Order
 
@@ -618,9 +583,7 @@ script.
 
   -----------------------------------------------------------
   USE &lt;AnyUserDatabase&gt;;
-  
   DECLARE @DropExternalTableAndSchema BIT = 0
-  
   DECLARE @SchemaForExternalTable VARCHAR(255) = 'EXTSQLDW'
   -----------------------------------------------------------
 
@@ -628,7 +591,7 @@ Please note, dropping external tables will not drop files created on
 blob storage. If you want to delete data as well, you need to delete it
 from the blob storage account manually.
 
-1.  []{#_Toc486421945 .anchor}Importing Data from Blob Storage to SQL DW
+### 2.2 Importing Data from Blob Storage to SQL DW
 
 Script available in attachment can be used for automatically generating
 scripts for creating external tables in SQL DW database. These external
@@ -645,9 +608,6 @@ APS\\SQL DW). The script generated here is in multiple parts copy all
 the scripts (Part1-Part6). The script is broken down into multiple parts
 due to limit of 8000 characters for varchar in APS and the table
 definition could easily exceed that limit:
-
-![](media/image7.png){width="6.649471784776903in"
-height="1.4768657042869642in"}
 
 Figure 6 - Import - External Tables
 
@@ -675,19 +635,12 @@ shown in Figure 4) for executing it on SQL DW database:
 
   -------------------------------------------------------------------------------------------------------------------------
   USE &lt;&lt;SQL DW DatabaseName&gt;&gt;;
-  
   --step 1: define all parameters
-  
   DECLARE @FormatType VARCHAR(100) = 'DELIMITEDTEXT'
-  
   DECLARE @FieldDelimiter VARCHAR(10) = '\^|\^'
-  
   DECLARE @DateFormat VARCHAR(12) = 'MM/dd/yyyy'
-  
   DECLARE @DataCompression VARCHAR(100) = 'org.apache.hadoop.io.compress.GzipCodec'
-  
   DECLARE @AzureStorageAccount VARCHAR(1000) = 'wasbs://&lt;containername&gt;@&lt;accountname&gt;.blob.core.windows.net/'
-  
   DECLARE @AzureStorageAccessKey VARCHAR(1000) = '\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*'
   -------------------------------------------------------------------------------------------------------------------------
 
@@ -698,7 +651,7 @@ into them from external tables (example shown in section 1.2.5, 1.2.6,
 query window (you can split the result set and execute them in parallel
 across multiple query windows).
 
-1.  []{#_Toc486421946 .anchor}Generating scripts for other objects
+### 2.3 Generating scripts for other objects
 
 Finally, you can execute scripts (**GenerateModuleScript.dsql**,
 **GenerateNonClusteredIndex.dsql** and
