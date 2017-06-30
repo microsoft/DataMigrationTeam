@@ -729,7 +729,7 @@ Create the stored procedure from the script
 CreateStatsForAllColumns.sql. To create statistics on all columns in the
 table with this procedure, simply call the procedure.
 
-1.  []{#_Toc486421947 .anchor}References
+## 3 References
 
 <https://www.microsoft.com/en-us/sql-server/analytics-platform-system>
 
@@ -739,16 +739,13 @@ table with this procedure, simply call the procedure.
 
 <https://docs.microsoft.com/en-us/sql/relational-databases/polybase/polybase-guide>
 
-1.  []{#_Toc486421948 .anchor}Appendix
+## 4 Appendix
 
-    1.  []{#_Toc486421949 .anchor}Configure PolyBase Connectivity to
-        External Data
-
+### 4.1 Configure PolyBase Connectivity to External Data
 Before you can start exporting data out from APS appliance to Azure Blob
 Storage account, there are some configuration changes need to be done
 and appliance services need to be restarted. This link has details on
 steps:
-
 <https://msdn.microsoft.com/en-us/sql/analytics-platform-system/configure-polybase-connectivity-to-external-data>
 
 <https://msdn.microsoft.com/en-us/sql/analytics-platform-system/use-a-dns-forwarder-to-resolve-non-appliance-dns-names>
