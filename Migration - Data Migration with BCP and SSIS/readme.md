@@ -1,4 +1,4 @@
-# APS to SQL DW Migration – Data Migration with BCP and SSIS
+# APS to SQL DW Migration – Data Migration with BCP and SSIS - Export
 
 ## Contributors
 
@@ -11,13 +11,7 @@
 **Basawashree Vasmate**, Consultant
 
 ## 1. Introduction
-
-[[[[[[[[[[]{#_Ref369795683 .anchor}]{#_Toc350951362
-.anchor}]{#_Toc299630714 .anchor}]{#_Toc240256126
-.anchor}]{#_Toc236037178 .anchor}]{#_Toc383165772
-.anchor}]{#_Toc383165770 .anchor}]{#_Toc383165768
-.anchor}]{#_Toc383165766 .anchor}]{#_Toc383165764 .anchor}In certain
-cases when you cannot use Polybase to export the data out from APS, you
+In certain cases when you cannot use Polybase to export the data out from APS, you
 can use BCP method. This document talks about the tool which migrates
 the data from APS database to the file system using BCP and SSIS (for
 parallel exports). The tool generates a folder for each table in the
@@ -54,9 +48,7 @@ which is supported when using Polybase to import data into SQL Data
 Warehouse. Use of compression, obviously helps in optimizing data
 movement and recommended to use it.
 
-![](media/image1.png){width="4.438405511811023in"
-height="3.5260662729658794in"}
-
+![figure1](https://user-images.githubusercontent.com/25438079/27756503-fc75361e-5dac-11e7-9588-8d44be946fce.png)
 Figure 1 - Data Export with BCP and SSIS
 
 ### 2.1 Step 1:
@@ -127,7 +119,7 @@ executing the command in above step
 In this step, you need to execute the SSIS package. Structure of the
 package is as below
 
-![](media/image2.png){width="7.0in" height="3.9158114610673667in"}
+![figure2](https://user-images.githubusercontent.com/25438079/27756514-10a921cc-5dad-11e7-8c1f-fc7db5e713c6.png)
 
 Table in the Step 1 will also have a column ‘SSISLoop’ which is
 populated with sequential number for each row, starting from 1 up to a
@@ -187,4 +179,5 @@ successfully in last attempts).
 
 <https://blogs.msdn.microsoft.com/sqlcat/2017/05/17/azure-sql-data-warehouse-loading-patterns-and-strategies/>
 
-<https://docs.microsoft.com/en-us/sql/relational-databases/polybase/polybase-guide>
+<https://docs.microsoft.com/en-us/sql/tools/bcp-utility>
+<https://docs.microsoft.com/en-us/sql/integration-services/sql-server-integration-services>
