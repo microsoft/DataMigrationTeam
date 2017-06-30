@@ -386,8 +386,8 @@ can specify one or more databases to consider in single execution. For
 each database you want to include, you need to one INSERT statement for
 each database as shown below:
 
-    	--step 2: define databases that you want to include
-  	        INSERT INTO DatabasesToInclude VALUES ('AdventureWorksPDW2012')
+	--step 2: define databases that you want to include
+	INSERT INTO DatabasesToInclude VALUES ('AdventureWorksPDW2012')
   
 After execution of the above script, output should look like this:
 
@@ -396,7 +396,14 @@ Figure 4 - Export - Dynamic Script Generation
 Next you need to execute **ExportToBlob-Part2.dsql** but before that you
 need to again specify few important configuration parameters, for
 example,
-
+ 
+	--step 1: define all parameters
+	DECLARE @FormatType VARCHAR(100) = 'DELIMITEDTEXT'
+	DECLARE @FieldDelimiter VARCHAR(10) = '^|^'
+	DECLARE @DateFormat VARCHAR(12) = 'MM/dd/yyyy'
+	DECLARE @DataCompression VARCHAR(100) = 'org.apache.hadoop.io.compress.GzipCodec'
+	DECLARE @AzureStorageAccount VARCHAR(1000) = 'wasbs://<containername><accountname>.blob.core.windows.net/'
+	
 -   @AzureStorageAccount - You need to specify the blob storage location
     where data needs to be exported. This storage account must have been
     setup in core-site.xml file and APS must have been restarted after
@@ -407,14 +414,6 @@ example,
     have a compact data file but in case if you suspect a collision
     between one specific character delimiter with the data in tables,
     you can make it multi-characters.
-
-	--step 1: define all parameters
-	DECLARE @FormatType VARCHAR(100) = 'DELIMITEDTEXT'
-  DECLARE @FieldDelimiter VARCHAR(10) = '\^|\^'
-  DECLARE @DateFormat VARCHAR(12) = 'MM/dd/yyyy'
-  DECLARE @DataCompression VARCHAR(100) = 'org.apache.hadoop.io.compress.GzipCodec'
-  DECLARE @AzureStorageAccount VARCHAR(1000) = 'wasbs://&lt;containername&gt;@&lt;accountname&gt;.blob.core.windows.net/'
-  -------------------------------------------------------------------------------------------------------------------------
 
 Also, before execution of the **ExportToBlob-Part2.dsql** script you
 need to copy script output (after executing **ExportToBlob-Part1.dsql**
@@ -446,11 +445,9 @@ the external tables created earlier and their corresponding schema, you
 need to set @DropExternalTableAndSchema to 1 before executing this
 script.
 
-  -----------------------------------------------------------
-  USE &lt;AnyUserDatabase&gt;;
-  DECLARE @DropExternalTableAndSchema BIT = 0
-  DECLARE @SchemaForExternalTable VARCHAR(255) = 'EXTSQLDW'
-  -----------------------------------------------------------
+        USE <AnyUserDatabase>;
+        DECLARE @DropExternalTableAndSchema BIT = 0
+        DECLARE @SchemaForExternalTable VARCHAR(255) = 'EXTSQLDW'
 
 Please note, dropping external tables will not drop files created on
 blob storage. If you want to delete data as well, you need to delete it
@@ -482,9 +479,7 @@ database you want to include, you need to one INSERT statement for each
 database, as shown below, in **ImportFromBlob-Part1.dsql** before
 execution:
 
-  -----------------------------------------------------------------
-  INSERT INTO DatabasesToInclude VALUES ('AdventureWorksPDW2012')
-  -----------------------------------------------------------------
+        INSERT INTO DatabasesToInclude VALUES ('AdventureWorksPDW2012')
 
 Next you need to connect to SQL DW database and execute
 **ImportFromBlob-Part2.dsql** script but before that you need to change
@@ -498,16 +493,14 @@ shown in Figure 4) for executing it on SQL DW database:
     you specified when exporting data. It should be exactly same as
     above.
 
-  -------------------------------------------------------------------------------------------------------------------------
-  USE &lt;&lt;SQL DW DatabaseName&gt;&gt;;
-  --step 1: define all parameters
-  DECLARE @FormatType VARCHAR(100) = 'DELIMITEDTEXT'
-  DECLARE @FieldDelimiter VARCHAR(10) = '\^|\^'
-  DECLARE @DateFormat VARCHAR(12) = 'MM/dd/yyyy'
-  DECLARE @DataCompression VARCHAR(100) = 'org.apache.hadoop.io.compress.GzipCodec'
-  DECLARE @AzureStorageAccount VARCHAR(1000) = 'wasbs://&lt;containername&gt;@&lt;accountname&gt;.blob.core.windows.net/'
-  DECLARE @AzureStorageAccessKey VARCHAR(1000) = '\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*\*'
-  -------------------------------------------------------------------------------------------------------------------------
+        USE <SQL DW DatabaseName>
+        --step 1: define all parameters
+        DECLARE @FormatType VARCHAR(100) = 'DELIMITEDTEXT'
+        DECLARE @FieldDelimiter VARCHAR(10) = '^|^'
+        DECLARE @DateFormat VARCHAR(12) = 'MM/dd/yyyy'
+        DECLARE @DataCompression VARCHAR(100) = 'org.apache.hadoop.io.compress.GzipCodec'
+        DECLARE @AzureStorageAccount VARCHAR(1000) = 'wasbs://<containername><accountname>.blob.core.windows.net/'
+        DECLARE @AzureStorageAccessKey VARCHAR(1000) = '******************************'
 
 Next, you need to execute **ImportFromExternal-Part1.dsql** script. This
 gives scripts for creating SQL DW internal tables and importing data
