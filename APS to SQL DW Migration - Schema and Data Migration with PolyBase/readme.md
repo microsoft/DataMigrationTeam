@@ -20,6 +20,7 @@ Framework* also generates scripts for other types of objects, like
 views, stored procedures etc. The generated scripts then can be executed
 sequentially or in parallel by running them in multiple query windows.
 
+![figure1](https://user-images.githubusercontent.com/25438079/27752639-ead69ab2-5d96-11e7-86d4-566d3118a103.png)
 Figure 1 - Schema and Data Migration Workflow
 
 1.  Generate scripts (external table) for all tables in required source
@@ -70,6 +71,7 @@ schema FINANCE the corresponding schema in SQL Data Warehouse will be
 DM1\_FINANCE. Of course, this requires to changes references of the
 objects in views or modules.
 
+![figure2](https://user-images.githubusercontent.com/25438079/27752679-1c3ac858-5d97-11e7-97e8-e6176849829a.png)
 Figure 2 - Schema Migration
 
 For data migration, external tables are created in APS to export the
@@ -78,6 +80,7 @@ Data Warehouse to reference the data from blob storage. Finally,
 internal tables are created and populated with data from blob storage
 via external tables in SQL Data Warehouse.
 
+![figure3](https://user-images.githubusercontent.com/25438079/27752689-2afc4330-5d97-11e7-9920-b84aa00398d2.png)
 Figure 3 - Data Migration with PolyBase
 
 ### 1.1 Feature Highlights
@@ -366,8 +369,7 @@ can be created on SQL DW.
         			 @CreatedBy
         	    ) 
         END
-
-Figure - TODO
+![figure4](https://user-images.githubusercontent.com/25438079/27752766-8f981a30-5d97-11e7-97d5-96a131ffaf3a.png)
 
 ## 2. Script Generation Automation Framework
 
@@ -391,6 +393,7 @@ each database as shown below:
   
 After execution of the above script, output should look like this:
 
+![figure4](https://user-images.githubusercontent.com/25438079/27752694-36884258-5d97-11e7-8138-43c9cde1bb22.png)
 Figure 4 - Export - Dynamic Script Generation
 
 Next you need to execute **ExportToBlob-Part2.dsql** but before that you
@@ -430,7 +433,7 @@ proper order),
 -   Finally, run all the scripts for creating external tables and
     exporting data to blob storage for that database
 
-
+![figure5](https://user-images.githubusercontent.com/25438079/27752710-477b4f24-5d97-11e7-916a-f8e5bdee7f24.png)
 Figure 5 - Export - Script Execution Order
 
 Note - You will need to manually clean up blob storage account before
@@ -471,6 +474,7 @@ the scripts (Part1-Part6). The script is broken down into multiple parts
 due to limit of 8000 characters for varchar in APS and the table
 definition could easily exceed that limit:
 
+<img width="857" alt="figure6" src="https://user-images.githubusercontent.com/25438079/27752728-5e6ccae6-5d97-11e7-9222-6e108164f315.png">
 Figure 6 - Import - External Tables
 
 Again, the framework allows you to specify databases to work on. You can
