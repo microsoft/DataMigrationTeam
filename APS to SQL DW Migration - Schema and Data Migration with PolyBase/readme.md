@@ -114,49 +114,31 @@ Figure 3 - Data Migration with PolyBase
 ### 1.2 Sample script output – formatted for readability purpose
 
 ####  1.2.1 Create Data Source and File Format
-
 Based on configuration parameter set, the framework generates data
 source and file format (creating master key and credential is not shown
 here):
 
-  -----------------------------------------------------------------------------------------
-  IF EXISTS (SELECT \* FROM sys.external\_file\_formats WHERE name = 'ff\_textdelimited')
-  
-  DROP EXTERNAL FILE FORMAT ff\_textdelimited;
-  
-  CREATE EXTERNAL FILE FORMAT ff\_textdelimited
-  
-  WITH (
-  
-  FORMAT\_TYPE = DELIMITEDTEXT,
-  
-  FORMAT\_OPTIONS (
-  
-  FIELD\_TERMINATOR = '\^|\^',
-  
-  DATE\_FORMAT = 'MM/dd/yyyy'),
-  
-  DATA\_COMPRESSION = 'org.apache.hadoop.io.compress.GzipCodec'
-  
-  );
-  
-  IF EXISTS (SELECT \* FROM sys.external\_data\_sources WHERE name = 'ds\_blobstorage')
-  
-  DROP EXTERNAL DATA SOURCE ds\_blobstorage;
-  
-  CREATE EXTERNAL DATA SOURCE ds\_blobstorage
-  
-  WITH (
-  
-  TYPE = HADOOP,
-  
-  LOCATION = 'wasbs://container@blobaccount.blob.core.windows.net/'
-  
-  );
-  -----------------------------------------------------------------------------------------
+		IF EXISTS (SELECT * FROM sys.external_file_formats WHERE name = 'ff_textdelimited')   
+	        DROP EXTERNAL FILE FORMAT ff_textdelimited; 
+            
+		CREATE EXTERNAL FILE FORMAT ff_textdelimited  
+		WITH (      
+            FORMAT_TYPE = DELIMITEDTEXT,      
+            FORMAT_OPTIONS (           
+            FIELD_TERMINATOR = '^|^',          
+            DATE_FORMAT = 'MM/dd/yyyy'),    
+            DATA_COMPRESSION = 'org.apache.hadoop.io.compress.GzipCodec'  
+		);
+        
+		IF EXISTS (SELECT * FROM sys.external_data_sources WHERE name = 'ds_blobstorage')      
+	        DROP EXTERNAL DATA SOURCE ds_blobstorage;   
+		CREATE EXTERNAL DATA SOURCE ds_blobstorage      
+		WITH (           
+            TYPE = HADOOP,          
+            LOCATION = 'wasbs://container@blobaccount.blob.core.windows.net/'   
+		);
 
-1.  Create Schema in APS for external tables
-
+####  1.2.2 Create Schema in APS for external tables
 Based on configuration parameter set, framework creates a schema in APS
 so that all the objects are segregated into for manageability purpose:
 
@@ -198,9 +180,7 @@ blob storage under folder specified.
   
   REJECT\_VALUE = 0
   
-  )
-  
-  AS SELECT \* FROM AdventureWorksPDW2012.\[dbo\].\[FactInternetSales\];
+  ) AS SELECT \* FROM AdventureWorksPDW2012.\[dbo\].\[FactInternetSales\];
   -------------------------------------------------------------------------------------
 
 1.  Create External Table – SQL DW
