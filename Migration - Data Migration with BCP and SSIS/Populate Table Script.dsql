@@ -1,0 +1,312 @@
+﻿IF OBJECT_ID('TempDB..#PartitionInformation') IS NOT NULL
+DROP TABLE #PartitionInformation
+GO
+
+IF OBJECT_ID('PartitionInformation') IS NOT NULL
+DROP TABLE PartitionInformation
+GO
+
+DECLARE @FilePath NVARCHAR(1000)
+SET @FilePath = 'D:\Test'
+
+DECLARE @APSServer NVARCHAR(100) = '***.***.***.***'
+DECLARE @Username NVARCHAR(100) = 'Sa'
+DECLARE @Password NVARCHAR(100) = '***********'
+DECLARE @ZIPExePathName NVARCHAR(100) = 'C:\7-Zip\7zG.exe'
+DECLARE @NoOfConcurrentSSISLoop Int = 10 -- (Values allowed = 5 or 10)
+
+CREATE TABLE PartitionInformation
+(
+	 [SINo] INT 
+	, DBName NVARCHAR(128)
+	, SchemaName NVARCHAR(128)
+	, TableName NVARCHAR(128)
+	, ColumnName NVARCHAR(200)
+	, PartitionNumber INT
+	, [Type] VARCHAR(10)
+	, ColumnList NVARCHAR(4000)
+	, LowerBoundaryValue NVARCHAR(100)
+	, UpperBoundaryValue NVARCHAR(100)
+	, CreateDirCommand NVARCHAR(2000)
+	, BCPCommandPart1 NVARCHAR(4000)
+	, BCPCommandPart2 NVARCHAR(1000)
+	, GZipCommand NVARCHAR(2000)
+	, DeleteFileCommand NVARCHAR(2000)
+	, SSISLoop INT
+	, IsProcessed BIT
+)
+
+/* Create CTAS http://www.bradleyschacht.com/converting-sql_variant-on-pdw/ */
+
+CREATE TABLE #PartitionInformation  
+WITH (DISTRIBUTION = REPLICATE) AS
+
+/* partitioned table/indexes */
+SELECT  
+ 	OBJECT_NAME(p.object_id) TableName,
+	p.Partition_Number ,
+	CONVERT(VARCHAR(200), prv_left.value, 101) AS LowerBoundaryValue ,
+	CONVERT(VARCHAR(200), prv_right.value, 101) AS  UpperBoundaryValue
+FROM
+	sys.partitions                AS p 
+	JOIN sys.indexes                     AS i
+	      ON i.object_id = p.object_id
+	      AND i.index_id = p.index_id
+	JOIN sys.data_spaces                 AS ds
+	      ON ds.data_space_id = i.data_space_id
+	JOIN sys.partition_schemes           AS ps
+	      ON ps.data_space_id = ds.data_space_id
+	JOIN sys.partition_functions         AS pf
+	      ON pf.function_id = ps.function_id
+	LEFT JOIN sys.partition_range_values AS prv_left
+	      ON ps.function_id = prv_left.function_id
+	      AND prv_left.boundary_id = p.partition_number - 1
+	LEFT JOIN sys.partition_range_values AS prv_right
+		  ON ps.function_id = prv_right.function_id
+		  AND prv_right.boundary_id = p.partition_number  
+UNION ALL
+
+/* non-partitioned table/indexes */
+
+SELECT DISTINCT
+	  OBJECT_NAME(p.object_id) AS    TableName,
+	  p.partition_number          AS PartitionNumber,
+	  NULL                        AS LowerBoundaryValue,
+	  NULL                        AS UpperBoundaryValue
+	 
+FROM sys.partitions     AS p
+	JOIN sys.indexes        AS i
+		ON i.object_id = p.object_id
+		AND i.index_id = p.index_id
+	JOIN INFORMATION_SCHEMA.Tables AS t
+		ON i.object_id = object_id(t.Table_Name) AND table_type <> 'view'
+	JOIN sys.data_spaces    AS ds
+		ON ds.data_space_id = i.data_space_id
+	JOIN sys.filegroups           AS fg
+		ON fg.data_space_id = i.data_space_id
+
+
+/* Insert into PartitionInformation Table */
+
+INSERT INTO PartitionInformation
+(
+	 SINo
+	, DBName 
+	, SchemaName 
+	, TableName 
+	, ColumnName
+	, PartitionNumber 
+	, Type
+	, LowerBoundaryValue 
+	, UpperBoundaryValue 
+	, ColumnList
+	, CreateDirCommand 
+	, BCPCommandPart1
+	, BCPCommandPart2
+	, GZipCommand 
+	, DeleteFileCommand
+	, SSISLoop
+	, IsProcessed 
+)
+SELECT DISTINCT
+	DENSE_RANK() OVER(ORDER BY pt.TableName,pt.Partition_Number),
+	t.Table_Catalog AS DBName,
+	t.Table_Schema AS SchemaName,
+	pt.TableName,
+	c.name AS ColumnName,
+	pt.Partition_Number,
+	CASE WHEN pf.boundary_value_on_right = 1 AND c.name IS NOT NULL THEN 'RIGHT' 
+		WHEN pf.boundary_value_on_right = 0 AND c.name IS NOT NULL THEN 'LEFT' 
+		ELSE NULL END AS [Type],
+	pt.LowerBoundaryValue,
+	pt.UpperBoundaryValue,
+	NULL,
+	'/k mkdir '+@FilePath+'\'+t.Table_Name+ ' & Exit',
+	NULL,
+	NULL,
+	NULL,
+	NULL,
+	NULL,
+	0
+FROM #PartitionInformation Pt
+	LEFT JOIN sys.partitions AS p 
+		  ON Object_id(pt.TableName) = p.Object_id and pt.Partition_Number = p.Partition_Number  
+	JOIN sys.indexes                     AS i
+	      ON i.object_id = p.object_id
+	      AND i.index_id = p.index_id
+	JOIN INFORMATION_SCHEMA.Tables AS t
+		  ON pt.TableName = t.Table_Name
+	LEFT JOIN  sys.index_columns AS ic			
+		  ON  (ic.partition_ordinal > 0 and ic.index_id = i.index_id and ic.object_id = object_id(t.Table_Name))
+	LEFT JOIN  sys.columns AS c					
+		  ON  (c.object_id = ic.object_id and c.column_id = ic.column_id)
+	LEFT JOIN sys.data_spaces                 AS ds
+	      ON ds.data_space_id = i.data_space_id
+	LEFT JOIN sys.partition_schemes           AS ps
+	      ON ps.data_space_id = ds.data_space_id
+	LEFT JOIN sys.partition_functions         AS pf
+	      ON pf.function_id = ps.function_id
+ORDER BY pt.TableName, pt.Partition_Number
+
+
+/* Update BCPCommands */
+
+UPDATE A 
+SET BCPCommandPart1 = CASE WHEN ColumnName IS NULL 
+	THEN '/k bcp "SELECT * FROM '
+ WHEN ColumnName IS NOT NULL AND LowerBoundaryValue IS NOT NULL AND UpperBoundaryValue IS NOT NULL AND Type = 'LEFT' 
+	THEN '/k bcp "SELECT * FROM ' 
+ WHEN ColumnName IS NOT NULL AND LowerBoundaryValue IS NOT NULL AND UpperBoundaryValue IS NOT NULL AND Type = 'RIGHT' 
+	THEN '/k bcp "SELECT * FROM ' 
+ WHEN ColumnName IS NOT NULL AND LowerBoundaryValue IS NULL AND UpperBoundaryValue IS NOT NULL AND Type = 'RIGHT' AND LowerBoundaryValue IS NULL 
+	THEN '/k bcp "SELECT * FROM '
+ WHEN ColumnName IS NOT NULL AND LowerBoundaryValue IS NULL AND UpperBoundaryValue IS NOT NULL AND Type = 'LEFT' AND LowerBoundaryValue IS NULL 
+	THEN '/k bcp "SELECT * FROM '
+ WHEN ColumnName IS NOT NULL AND Type = 'LEFT' AND UpperBoundaryValue IS NULL 
+	THEN '/k bcp "SELECT * FROM '
+ WHEN ColumnName IS NOT NULL AND Type = 'RIGHT' AND UpperBoundaryValue IS NULL 
+	THEN '/k bcp "SELECT * FROM '
+ END
+FROM PartitionInformation A
+
+
+UPDATE A 
+SET BCPCommandPart2 = CASE WHEN ColumnName IS NULL 
+	THEN SchemaName + '.' +TableName+ '" queryout "'+@FilePath+'\'+TABLENAME+'\'+TABLENAME+'.txt" -S "'+@APSServer+',17001" -d '+DBNAME+' -U "'+@Username+ '"  -P "'+@Password+'"  -q -t"^|^" -w & Exit'  
+ WHEN ColumnName IS NOT NULL AND LowerBoundaryValue IS NOT NULL AND UpperBoundaryValue IS NOT NULL AND Type = 'LEFT' 
+	THEN SchemaName + '.' +TableName+ ' WHERE '+ColumnName +' > ' +LowerBoundaryValue+ ' AND '+ColumnName +' <= ' +UpperBoundaryValue+ '" queryout "'+@FilePath+'\'+TABLENAME+'\'+TABLENAME+'_'+UpperBoundaryValue+'.txt" -S "'+@APSServer+',17001" -d '+DBNAME+' -U "'+@Username+ '"  -P "'+@Password+'"  -q -t"^|^" -w & Exit' 
+ WHEN ColumnName IS NOT NULL AND LowerBoundaryValue IS NOT NULL AND UpperBoundaryValue IS NOT NULL AND Type = 'RIGHT' 
+	THEN SchemaName + '.' +TableName+ ' WHERE '+ColumnName +' >= ' +LowerBoundaryValue+ ' AND '+ColumnName +' < ' +UpperBoundaryValue+'" queryout "'+@FilePath+'\'+TABLENAME+'\'+TABLENAME+'_'+UpperBoundaryValue+'.txt" -S "'+@APSServer+',17001" -d '+DBNAME+' -U "'+@Username+ '"  -P "'+@Password+'"  -q -t"^|^" -w & Exit' 
+ WHEN ColumnName IS NOT NULL AND LowerBoundaryValue IS NULL AND UpperBoundaryValue IS NOT NULL AND Type = 'RIGHT' AND LowerBoundaryValue IS NULL 
+	THEN SchemaName + '.' +TableName+ ' WHERE '+ColumnName +' < ' +UpperBoundaryValue+'" queryout "'+@FilePath+'\'+TABLENAME+'\'+TABLENAME+'_'+UpperBoundaryValue+'.txt" -S "'+@APSServer+',17001" -d '+DBNAME+' -U "'+@Username+ '"  -P "'+@Password+'"  -q -t"^|^" -w & Exit' 
+ WHEN ColumnName IS NOT NULL AND LowerBoundaryValue IS NULL AND UpperBoundaryValue IS NOT NULL AND Type = 'LEFT' AND LowerBoundaryValue IS NULL 
+	THEN SchemaName + '.' +TableName+ ' WHERE '+ColumnName +' <= ' +UpperBoundaryValue+'" queryout "'+@FilePath+'\'+TABLENAME+'\'+TABLENAME+'_'+UpperBoundaryValue+'.txt" -S "'+@APSServer+',17001" -d '+DBNAME+' -U "'+@Username+ '"  -P "'+@Password+'"  -q -t"^|^" -w & Exit' 
+ WHEN ColumnName IS NOT NULL AND Type = 'LEFT' AND UpperBoundaryValue IS NULL 
+	THEN SchemaName + '.' +TableName+ ' WHERE '+ColumnName +' > ' +LowerBoundaryValue+'" queryout "'+@FilePath+'\'+TABLENAME+'\'+TABLENAME+'_>'+LowerBoundaryValue+'.txt" -S "'+@APSServer+',17001" -d '+DBNAME+' -U "'+@Username+ '"  -P "'+@Password+'"  -q -t"^|^" -w & Exit' 
+ WHEN ColumnName IS NOT NULL AND Type = 'RIGHT' AND UpperBoundaryValue IS NULL 
+	THEN SchemaName + '.' +TableName+ ' WHERE '+ColumnName +' >= ' +LowerBoundaryValue+'" queryout "'+@FilePath+'\'+TABLENAME+'\'+TABLENAME+'_>'+LowerBoundaryValue+'.txt" -S "'+@APSServer+',17001" -d '+DBNAME+' -U "'+@Username+ '"  -P "'+@Password+'"  -q -t"^|^" -w & Exit' 
+ END
+FROM PartitionInformation A
+
+/* Update GZipCommand */
+
+UPDATE PartitionInformation SET GZIPCommand = '/k '+@ZIPExePathName +' a -tgzip '+ 
+				CASE WHEN ColumnName IS NOT NULL AND UpperBoundaryValue IS NOT NULL 
+						THEN  @FilePath+'\'+TableName+'\'+TableName+'_'+UpperBoundaryValue+'.gzip'
+					WHEN ColumnName IS NOT NULL AND UpperBoundaryValue IS NULL 
+						THEN @FilePath+'\'+TableName+'\'+TableName+'_>'+LowerBoundaryValue+'.gzip'
+					ELSE @FilePath+'\'+TableName+'\'+TableName+'.gzip' END +' ' +
+				CASE WHEN ColumnName IS NOT NULL AND UpperBoundaryValue IS NOT NULL 
+						THEN  @FilePath+'\'+TableName+'\'+TableName+'_'+UpperBoundaryValue+'.txt & Exit'
+					WHEN ColumnName IS NOT NULL AND UpperBoundaryValue IS NULL 
+						THEN @FilePath+'\'+TableName+'\'+TableName+'_>'+LowerBoundaryValue+'.txt & Exit'
+					ELSE @FilePath+'\'+TableName+'\'+TableName+'.txt & Exit' END
+
+
+/* Update Command to Delete Decompressed File */
+
+UPDATE PartitionInformation 
+SET DeleteFileCommand = CASE WHEN ColumnName IS NOT NULL AND UpperBoundaryValue IS NOT NULL THEN '/k DEL '+@FilePath+'\'+TableName+'\'+TableName+'_'+UpperBoundaryValue+'.txt & Exit'
+				 WHEN ColumnName IS NOT NULL AND UpperBoundaryValue IS NULL THEN '/k DEL '+@FilePath+'\'+TableName+'\'+TableName+'_>'+LowerBoundaryValue+'.txt & Exit'
+				ELSE '/k DEL '+@FilePath+'\'+TableName+'\'+TableName+'.txt & Exit' END
+
+
+/* Update SSISLoop Number */
+
+UPDATE [PartitionInformation] SET SSISLoop = CASE WHEN @NoOfConcurrentSSISLoop = 5 THEN CASE WHEN SINo%5 = 0 THEN 5 ELSE SINo%5 END 
+												WHEN  @NoOfConcurrentSSISLoop = 10 THEN CASE WHEN SINo%10 = 0 THEN 10 ELSE SINo%10 END END
+
+/* START - Script For Getting ColumnList with Replace */
+
+IF OBJECT_ID('Tempdb..#COLUMNCountINFO') IS NOT NULL
+DROP TABLE #COLUMNCountINFO
+
+IF OBJECT_ID('Tempdb..#COLUMNLISTINFO') IS NOT NULL
+DROP TABLE #COLUMNLISTINFO
+
+IF OBJECT_ID('Tempdb..#TEMP_RowByRow') IS NOT NULL
+DROP TABLE #TEMP_RowByRow
+
+CREATE TABLE #COLUMNCountINFO(TABLENAME NVARCHAR(100), COLUMNCOUNT INT, SINo INT)
+CREATE TABLE #TEMP_RowByRow(TABLENAME NVARCHAR(100), COLUMNCOUNT INT)
+CREATE TABLE #COLUMNLISTINFO(TABLENAME NVARCHAR(100), COLUMNLIST NVARCHAR(4000))
+
+INSERT INTO #COLUMNCountINFO
+SELECT DISTINCT TABLENAME, COUNT(1), ROW_NUMBER() OVER(ORDER BY TABLENAME)
+FROM INFORMATION_SCHEMA.TABLES T 
+JOIN (SELECT DISTINCT TABLENAME FROM PartitionInformation) P ON T.Table_Name = P.Tablename
+JOIN INFORMATION_SCHEMA.COLUMNS C ON P.TABLENAME = C.TABLE_NAME
+GROUP BY P.TABLENAME
+
+DECLARE @ColumnNames nvarchar(4000)
+DECLARE @TblCnt INT 
+DECLARE @TblNum INT 
+
+SET @ColumnNames = ''
+SET @TblNum = 1
+SET @TblCnt = (SELECT COUNT(1) FROM #COLUMNCountINFO)
+
+WHILE @TblNum <= @TblCnt
+BEGIN
+
+INSERT INTO #TEMP_RowByRow
+SELECT TABLENAME, COLUMNCOUNT FROM #COLUMNCountINFO WHERE SINo = @TblNum
+
+DECLARE @TableName NVARCHAR(200)
+DECLARE @ColCnt INT
+DECLARE @ColNum INT
+SET @ColNum = 1
+
+SET @TableName = (SELECT TableName FROM #TEMP_RowByRow)
+SET @ColCnt = (SELECT COLUMNCOUNT FROM #TEMP_RowByRow)
+
+WHILE @ColNum <= @ColCnt
+BEGIN
+
+SET @ColumnNames = @ColumnNames+(SELECT  CASE WHEN sc.Data_Type like '%char%' THEN 'REPLACE(REPLACE(['+sc.column_name+'],char(13), ''''), char(10), '' '')'  ELSE sc.column_name END +'],['
+FROM INFORMATION_SCHEMA.COLUMNS sc
+JOIN INFORMATION_SCHEMA.TABLES SO ON SO.Table_name=SC.Table_name
+WHERE SO.Table_Name = @TableName AND Ordinal_Position = @ColNum
+)
+
+SET @ColNum = @ColNum + 1
+
+END
+
+INSERT INTO #COLUMNLISTINFO
+SELECT @TableName , SUBSTRING('['+@ColumnNames,1,LEN(@ColumnNames)-1)
+
+SET @columnnames = ''
+SET @TblNum = @TblNum + 1
+
+TRUNCATE TABLE #TEMP_RowByRow
+
+END
+
+UPDATE #COLUMNLISTINFO
+SET COLUMNLIST = REPLACE(REPLACE(COLUMNLIST,'[REPLACE(REPLACE','REPLACE(REPLACE'),', char(10), '' '')]',', char(10), '' '')')
+
+--select * from #COLUMNLISTINFO
+/* END - Script For Getting ColumnList with Replace */
+
+/* UPDATE BCPCommand with ColumnList */
+
+ DECLARE @TblName NVARCHAR(200)
+ DECLARE @COUNT INT
+ SET @COUNT = (SELECT COUNT(1) FROM PartitionInformation)
+ DECLARE @Iteration INT = 1
+
+ WHILE @Iteration <= @COUNT 
+ BEGIN
+
+ SET @TblName = (SELECT Tablename FROM PartitionInformation WHERE SINo = @Iteration)
+
+ UPDATE PartitionInformation SET BCPCommandPart1 = REPLACE(BCPCommandPart1,'*',(SELECT COLUMNLIST FROM #COLUMNLISTINFO WHERE TABLENAME = @TblName)) WHERE TABLENAME = @TblName
+
+ SET @Iteration = @Iteration + 1
+
+ END
+
+SELECT * FROM PartitionInformation ORDER BY TableName, PartitionNumber
+
+ 
