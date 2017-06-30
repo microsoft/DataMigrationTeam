@@ -142,16 +142,11 @@ here):
 Based on configuration parameter set, framework creates a schema in APS
 so that all the objects are segregated into for manageability purpose:
 
-  ---------------------------------------------------------------
-  USE AdventureWorksPDW2012;
+        USE AdventureWorksPDW2012; 
+        IF EXISTS(SELECT * FROM sys.schemas WHERE name = 'EXTSQLDW')   
+        	DROP SCHEMA [EXTSQLDW];   
+        EXEC('CREATE SCHEMA [EXTSQLDW] AUTHORIZATION dbo;')
   
-  IF EXISTS(SELECT \* FROM sys.schemas WHERE name = 'EXTSQLDW')
-  
-  DROP SCHEMA \[EXTSQLDW\];
-  
-  EXEC('CREATE SCHEMA \[EXTSQLDW\] AUTHORIZATION dbo;')
-  ---------------------------------------------------------------
-
 ####  1.2.3 Create External Table - APS
 
 This is just one sample script to create an external table in APS
@@ -161,27 +156,18 @@ only identified databases\\tables for migration. After execution of this
 output script, you will have data for this table exported to specified
 blob storage under folder specified.
 
-  -------------------------------------------------------------------------------------
-  IF EXISTS(SELECT \* FROM sys.external\_tables WHERE name = 'dbo.FactInternetSales')
-  
-  DROP TABLE \[EXTSQLDW\].\[dbo.FactInternetSales\];
-  
-  CREATE EXTERNAL TABLE \[EXTSQLDW\].\[dbo.FactInternetSales\]
-  
-  WITH (
-  
-  LOCATION = '/AdventureWorksPDW2012/dbo/FactInternetSales/',
-  
-  DATA\_SOURCE = ds\_blobstorage,
-  
-  FILE\_FORMAT = ff\_textdelimited,
-  
-  REJECT\_TYPE = VALUE,
-  
-  REJECT\_VALUE = 0
-  
-  ) AS SELECT \* FROM AdventureWorksPDW2012.\[dbo\].\[FactInternetSales\];
-  -------------------------------------------------------------------------------------
+        IF EXISTS(SELECT * FROM sys.external_tables WHERE name = 'dbo.FactInternetSales')            
+        	DROP TABLE [EXTSQLDW].[dbo.FactInternetSales]; 
+        
+        CREATE EXTERNAL TABLE [EXTSQLDW].[dbo.FactInternetSales]     
+        WITH (
+        	LOCATION = '/AdventureWorksPDW2012/dbo/FactInternetSales/',      
+        	DATA_SOURCE = ds_blobstorage,      
+        	FILE_FORMAT = ff_textdelimited,      
+        	REJECT_TYPE = VALUE,      
+        	REJECT_VALUE = 0     
+        	)     
+        AS SELECT * FROM AdventureWorksPDW2012.[dbo].[FactInternetSales];
 
 ####  1.2.4 Create External Table – SQL DW
 
@@ -192,83 +178,45 @@ executed on SQL DW database, it will simply point to the data in blob
 storage (no data is imported yet, data import happens with the next set
 of scripts).
 
-  ------------------------------------------------------------------------------------------------------------------------------------------------
-  IF NOT EXISTS(SELECT \* FROM AdventureWorksPDW2012.sys.schemas
-  
-  WHERE name = 'AdventureWorksPDW2012\_dbo')
-  
-  EXEC('CREATE SCHEMA \[AdventureWorksPDW2012\_dbo\] AUTHORIZATION dbo;');
-  
-  IF EXISTS(SELECT \* FROM sys.external\_tables WHERE schema\_id = SCHEMA\_ID('AdventureWorksPDW2012\_dbo') AND name = 'EXT\_FactInternetSales')
-  
-  DROP TABLE \[AdventureWorksPDW2012\_dbo\].\[EXT\_FactInternetSales\];
-  
-  CREATE EXTERNAL TABLE \[AdventureWorksPDW2012\_dbo\].\[EXT\_FactInternetSales\]
-  
-  (
-  
-  \[ProductKey\] int NOT NULL,
-  
-  \[OrderDateKey\] int NOT NULL,
-  
-  \[DueDateKey\] int NOT NULL,
-  
-  \[ShipDateKey\] int NOT NULL,
-  
-  \[CustomerKey\] int NOT NULL,
-  
-  \[PromotionKey\] int NOT NULL,
-  
-  \[CurrencyKey\] int NOT NULL,
-  
-  \[SalesTerritoryKey\] int NOT NULL,
-  
-  \[SalesOrderNumber\] nvarchar(20) COLLATE Latin1\_General\_100\_CI\_AS\_KS\_WS NOT NULL,
-  
-  \[SalesOrderLineNumber\] tinyint NOT NULL,
-  
-  \[RevisionNumber\] tinyint NOT NULL,
-  
-  \[OrderQuantity\] smallint NOT NULL,
-  
-  \[UnitPrice\] money NOT NULL,
-  
-  \[ExtendedAmount\] money NOT NULL,
-  
-  \[UnitPriceDiscountPct\] float NOT NULL,
-  
-  \[DiscountAmount\] float NOT NULL,
-  
-  \[ProductStandardCost\] money NOT NULL,
-  
-  \[TotalProductCost\] money NOT NULL,
-  
-  \[SalesAmount\] money NOT NULL,
-  
-  \[TaxAmt\] money NOT NULL,
-  
-  \[Freight\] money NOT NULL,
-  
-  \[CarrierTrackingNumber\] nvarchar(25) COLLATE Latin1\_General\_100\_CI\_AS\_KS\_WS NULL,
-  
-  \[CustomerPONumber\] nvarchar(25) COLLATE Latin1\_General\_100\_CI\_AS\_KS\_WS NULL
-  
-  )
-  
-  WITH (
-  
-  LOCATION = '/AdventureWorksPDW2012/dbo/FactInternetSales/',
-  
-  DATA\_SOURCE = ds\_blobstorage,
-  
-  FILE\_FORMAT = ff\_textdelimited,
-  
-  REJECT\_TYPE = VALUE,
-  
-  REJECT\_VALUE = 0
-  
-  );
-  ------------------------------------------------------------------------------------------------------------------------------------------------
+        IF NOT EXISTS(SELECT * FROM AdventureWorksPDW2012.sys.schemas WHERE name = 'AdventureWorksPDW2012_dbo')     
+        	EXEC('CREATE SCHEMA [AdventureWorksPDW2012_dbo] AUTHORIZATION dbo;');
+        
+        IF EXISTS(SELECT * FROM sys.external_tables WHERE schema_id = SCHEMA_ID('AdventureWorksPDW2012_dbo') AND name = 'EXT_FactInternetSales')            
+        	DROP TABLE [AdventureWorksPDW2012_dbo].[EXT_FactInternetSales];  
+        
+        CREATE EXTERNAL TABLE [AdventureWorksPDW2012_dbo].[EXT_FactInternetSales]    
+        (
+        	[ProductKey] int NOT NULL, 
+        	[OrderDateKey] int NOT NULL, 
+        	[DueDateKey] int NOT NULL, 
+        	[ShipDateKey] int NOT NULL, 
+        	[CustomerKey] int NOT NULL, 
+        	[PromotionKey] int NOT NULL, 
+        	[CurrencyKey] int NOT NULL, 
+        	[SalesTerritoryKey] int NOT NULL, 
+        	[SalesOrderNumber] nvarchar(20) COLLATE Latin1_General_100_CI_AS_KS_WS NOT NULL, 
+        	[SalesOrderLineNumber] tinyint NOT NULL, 
+        	[RevisionNumber] tinyint NOT NULL, 
+        	[OrderQuantity] smallint NOT NULL, 
+        	[UnitPrice] money NOT NULL, 
+        	[ExtendedAmount] money NOT NULL, 
+        	[UnitPriceDiscountPct] float NOT NULL, 
+        	[DiscountAmount] float NOT NULL, 
+        	[ProductStandardCost] money NOT NULL, 
+        	[TotalProductCost] money NOT NULL, 
+        	[SalesAmount] money NOT NULL, 
+        	[TaxAmt] money NOT NULL, 
+        	[Freight] money NOT NULL, 
+        	[CarrierTrackingNumber] nvarchar(25) COLLATE Latin1_General_100_CI_AS_KS_WS NULL, 
+        	[CustomerPONumber] nvarchar(25) COLLATE Latin1_General_100_CI_AS_KS_WS NULL    
+        )
+        WITH (
+        	LOCATION = '/AdventureWorksPDW2012/dbo/FactInternetSales/',      
+        	DATA_SOURCE = ds_blobstorage,      
+        	FILE_FORMAT = ff_textdelimited,      
+        	REJECT_TYPE = VALUE,      
+        	REJECT_VALUE = 0     
+        );
 
 ####  1.2.5 Create Internal Table – ROUND\_ROBIN
 
@@ -277,35 +225,21 @@ database. As you can notice, the framework derives structure of the
 table from table structure in APS database as well as it derives
 distribution type, partitioning, index structure as well.
 
-  ---------------------------------------------------------------------------------------------
-  CREATE TABLE \[AdventureWorksPDW2012\_dbo\].\[FactInternetSalesRR\]
-  
-  WITH (DISTRIBUTION = ROUND\_ROBIN,
-  
-  PARTITION (\[OrderDateKey\] RANGE RIGHT FOR VALUES (\[20000101\],
-  
-  \[20010101\], \[20020101\], \[20030101\], \[20040101\], \[20050101\],
-  
-  \[20060101\], \[20070101\], \[20080101\], \[20090101\], \[20100101\],
-  
-  \[20110101\], \[20120101\], \[20130101\], \[20140101\], \[20150101\],
-  
-  \[20160101\], \[20170101\], \[20180101\], \[20190101\], \[20200101\],
-  
-  \[20210101\], \[20220101\], \[20230101\], \[20240101\], \[20250101\],
-  
-  \[20260101\], \[20270101\], \[20280101\], \[20290101\]))
-  
-  )
-  
-  AS
-  
-  SELECT \* FROM \[AdventureWorksPDW2012\_dbo\].\[EXT\_FactInternetSalesRR\];
-  
-  CREATE CLUSTERED COLUMNSTORE INDEX \[cci\_AdventureWorksPDW2012\_dbo\_FactInternetSalesRR\]
-  
-  ON \[AdventureWorksPDW2012\_dbo\].\[FactInternetSalesRR\];
-  ---------------------------------------------------------------------------------------------
+        CREATE TABLE [AdventureWorksPDW2012_dbo].[FactInternetSalesRR]    
+        WITH (DISTRIBUTION = ROUND_ROBIN, 
+        	PARTITION ([OrderDateKey] RANGE RIGHT FOR VALUES ([20000101], 
+        	[20010101], [20020101], [20030101], [20040101], [20050101], 
+        	[20060101], [20070101], [20080101], [20090101], [20100101], 
+        	[20110101], [20120101], [20130101], [20140101], [20150101], 
+        	[20160101], [20170101], [20180101], [20190101], [20200101], 
+        	[20210101], [20220101], [20230101], [20240101], [20250101], 
+        	[20260101], [20270101], [20280101], [20290101])) 
+        )    
+        AS    
+        SELECT * FROM [AdventureWorksPDW2012_dbo].[EXT_FactInternetSalesRR];
+        
+        CREATE CLUSTERED COLUMNSTORE INDEX [cci_AdventureWorksPDW2012_dbo_FactInternetSalesRR] 
+        ON [AdventureWorksPDW2012_dbo].[FactInternetSalesRR];
 
 ####  1.2.6 Create Internal Table – REPLICATED
 
@@ -314,68 +248,41 @@ ROUND\_ROBIN distribution for REPLICATED tables and put a comment inline
 so that it can be identified and changed quickly once REPLICATED table
 support is available in SQL DW.
 
-  --------------------------------------------------------------------------------------------
-  CREATE TABLE \[AdventureWorksPDW2012\_dbo\].\[FactInternetSalesR\]
-  
-  WITH (DISTRIBUTION = ROUND\_ROBIN /\*REPLICATE CHANGED TO ROUND\_ROBIN\*/,
-  
-  PARTITION (\[OrderDateKey\] RANGE RIGHT FOR VALUES (\[20000101\], \[20010101\],
-  
-  \[20020101\], \[20030101\], \[20040101\], \[20050101\], \[20060101\], \[20070101\],
-  
-  \[20080101\], \[20090101\], \[20100101\], \[20110101\], \[20120101\], \[20130101\],
-  
-  \[20140101\], \[20150101\], \[20160101\], \[20170101\], \[20180101\], \[20190101\],
-  
-  \[20200101\], \[20210101\], \[20220101\], \[20230101\], \[20240101\], \[20250101\],
-  
-  \[20260101\], \[20270101\], \[20280101\], \[20290101\])
-  
-  ) )
-  
-  AS
-  
-  SELECT \* FROM \[AdventureWorksPDW2012\_dbo\].\[EXT\_FactInternetSalesR\];
-  
-  CREATE CLUSTERED COLUMNSTORE INDEX \[cci\_AdventureWorksPDW2012\_dbo\_FactInternetSalesR\]
-  
-  ON \[AdventureWorksPDW2012\_dbo\].\[FactInternetSalesR\];
-  --------------------------------------------------------------------------------------------
+        CREATE TABLE [AdventureWorksPDW2012_dbo].[FactInternetSalesR]    
+        WITH (DISTRIBUTION = ROUND_ROBIN /*REPLICATE CHANGED TO ROUND_ROBIN*/, 
+        	PARTITION ([OrderDateKey] RANGE RIGHT FOR VALUES ([20000101], [20010101], 
+        	[20020101], [20030101], [20040101], [20050101], [20060101], [20070101], 
+        	[20080101], [20090101], [20100101], [20110101], [20120101], [20130101], 
+        	[20140101], [20150101], [20160101], [20170101], [20180101], [20190101], 
+        	[20200101], [20210101], [20220101], [20230101], [20240101], [20250101], 
+        	[20260101], [20270101], [20280101], [20290101])
+        	) )    
+        AS    
+        SELECT * FROM [AdventureWorksPDW2012_dbo].[EXT_FactInternetSalesR];
+        
+        CREATE CLUSTERED COLUMNSTORE INDEX [cci_AdventureWorksPDW2012_dbo_FactInternetSalesR] 
+        ON [AdventureWorksPDW2012_dbo].[FactInternetSalesR];
 
 ####  1.2.7 Create Internal Table – HASH
 
 The framework derives distribution and hash key information from APS
 databases and creates internal tables in SQL DW with the same structure.
 
-  -------------------------------------------------------------------------------------------
-  CREATE TABLE \[AdventureWorksPDW2012\_dbo\].\[FactInternetSales\]
-  
-  WITH (DISTRIBUTION = HASH(\[OrderDateKey\]), PARTITION (\[OrderDateKey\]
-  
-  RANGE RIGHT FOR VALUES (\[20000101\], \[20010101\], \[20020101\],
-  
-  \[20030101\], \[20040101\], \[20050101\], \[20060101\], \[20070101\],
-  
-  \[20080101\], \[20090101\], \[20100101\], \[20110101\], \[20120101\],
-  
-  \[20130101\], \[20140101\], \[20150101\], \[20160101\], \[20170101\],
-  
-  \[20180101\], \[20190101\], \[20200101\], \[20210101\], \[20220101\],
-  
-  \[20230101\], \[20240101\], \[20250101\], \[20260101\], \[20270101\],
-  
-  \[20280101\], \[20290101\]))
-  
-  )
-  
-  AS
-  
-  SELECT \* FROM \[AdventureWorksPDW2012\_dbo\].\[EXT\_FactInternetSales\];
-  
-  CREATE CLUSTERED COLUMNSTORE INDEX \[cci\_AdventureWorksPDW2012\_dbo\_FactInternetSales\]
-  
-  ON \[AdventureWorksPDW2012\_dbo\].\[FactInternetSales\];
-  -------------------------------------------------------------------------------------------
+        CREATE TABLE [AdventureWorksPDW2012_dbo].[FactInternetSales]    
+        WITH (DISTRIBUTION = HASH([OrderDateKey]), PARTITION ([OrderDateKey] 
+        	RANGE RIGHT FOR VALUES ([20000101], [20010101], [20020101], 
+        	[20030101], [20040101], [20050101], [20060101], [20070101], 
+        	[20080101], [20090101], [20100101], [20110101], [20120101], 
+        	[20130101], [20140101], [20150101], [20160101], [20170101], 
+        	[20180101], [20190101], [20200101], [20210101], [20220101], 
+        	[20230101], [20240101], [20250101], [20260101], [20270101], 
+        	[20280101], [20290101])) 
+        )    
+        AS    
+        SELECT * FROM [AdventureWorksPDW2012_dbo].[EXT_FactInternetSales];
+        
+        CREATE CLUSTERED COLUMNSTORE INDEX [cci_AdventureWorksPDW2012_dbo_FactInternetSales] 
+        ON [AdventureWorksPDW2012_dbo].[FactInternetSales];
 
 ####  1.2.8 Create Internal Table – CLUSTERED
 
@@ -383,19 +290,14 @@ Often tables in APS have clustered columnstore index but few small
 tables might have clustered rowstore index, again the framework derive
 this information from source and creates table accordingly in SQL DW.
 
-  -------------------------------------------------------------------------------
-  CREATE TABLE \[AdventureWorksPDW2012\_dbo\].\[DimSalesReason\]
-  
-  WITH (DISTRIBUTION = ROUND\_ROBIN /\*REPLICATE CHANGED TO ROUND\_ROBIN\*/ )
-  
-  AS
-  
-  SELECT \* FROM \[AdventureWorksPDW2012\_dbo\].\[EXT\_DimSalesReason\];
-  
-  CREATE CLUSTERED INDEX \[ci\_AdventureWorksPDW2012\_dbo\_DimSalesReason\]
-  
-  ON \[AdventureWorksPDW2012\_dbo\].\[DimSalesReason\] (\[SalesReasonKey\] ASC)
-  -------------------------------------------------------------------------------
+        CREATE TABLE [AdventureWorksPDW2012_dbo].[DimSalesReason]    
+        WITH (DISTRIBUTION = ROUND_ROBIN /*REPLICATE CHANGED TO ROUND_ROBIN*/ )    
+        AS    
+        SELECT * FROM [AdventureWorksPDW2012_dbo].[EXT_DimSalesReason];
+        
+        CREATE CLUSTERED INDEX [ci_AdventureWorksPDW2012_dbo_DimSalesReason] 
+        ON [AdventureWorksPDW2012_dbo].[DimSalesReason] ([SalesReasonKey] ASC)
+
 
 ####  1.2.9 Create Statistics
 
@@ -404,15 +306,10 @@ though if there are additional user created statistics. This framework
 identifies these additional statistics and create them once data load
 SQL DW table has been loaded with data and index have been created.
 
-  ---------------------------------------------------------------------------------------------------------------------------------------------------------------------
-  CREATE STATISTICS \[OrderDatekey\] ON \[AdventureWorksPDW2012\_dbo\].\[FactInternetSales\] (\[OrderDateKey\]);
-  
-  CREATE STATISTICS \[stat\_FactInternetSalesReason\_SalesOrderLineNumber\] ON \[AdventureWorksPDW2012\_dbo\].\[FactInternetSalesReason\] (\[SalesOrderLineNumber\]);
-  
-  CREATE STATISTICS \[stat\_FactInternetSalesReason\_SalesOrderNumber\] ON \[AdventureWorksPDW2012\_dbo\].\[FactInternetSalesReason\] (\[SalesOrderNumber\]);
-  
-  CREATE STATISTICS \[stat\_FactInternetSalesReason\_SalesReasonKey\] ON \[AdventureWorksPDW2012\_dbo\].\[FactInternetSalesReason\] (\[SalesReasonKey\]);
-  ---------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        CREATE STATISTICS [OrderDatekey] ON [AdventureWorksPDW2012_dbo].[FactInternetSales] ([OrderDateKey]);
+        CREATE STATISTICS [stat_FactInternetSalesReason_SalesOrderLineNumber] ON [AdventureWorksPDW2012_dbo].[FactInternetSalesReason] ([SalesOrderLineNumber]);
+        CREATE STATISTICS [stat_FactInternetSalesReason_SalesOrderNumber] ON [AdventureWorksPDW2012_dbo].[FactInternetSalesReason] ([SalesOrderNumber]);
+        CREATE STATISTICS [stat_FactInternetSalesReason_SalesReasonKey] ON [AdventureWorksPDW2012_dbo].[FactInternetSalesReason] ([SalesReasonKey]);
 
 ####  1.2.10 Create Modules
 
@@ -423,81 +320,54 @@ references of the objects in the code, for example from 3-part naming to
 2-part naming convention and then only it can be executed, or modules
 can be created on SQL DW.
 
-  -----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-  CREATE PROC \[dbo\].\[ETL\_LogEvent\] @SPName \[VARCHAR\](100),@StepName \[VARCHAR\](100) AS
-  
-  BEGIN
-  
-  DECLARE @ID INT,
-  
-  @EventDateTime Datetime
-  
-  SET @ID=(SELECT ISNULL(MAX(ID),0) FROM \[dbo\].\[ETL\_log\])+1
-  
-  SET @EventDateTime=GETDATE()
-  
-  INSERT INTO \[APS\_ETL\_Framework\].\[dbo\].\[ETL\_log\](\[ID\],\[SPName\],\[StepName\],\[EventDateTime\])
-  
-  VALUES(@ID,@SPName,@StepName,@EventDateTime)
-  
-  END;
-  
-  CREATE PROC \[dbo\].\[ExecutionLogStart\] @ExecutionID \[VARCHAR\](50),@SP \[VARCHAR\](100),@Section \[VARCHAR\](100),@Step \[CHAR\](5),@Message \[VARCHAR\](500),@Status \[VARCHAR\](16),@CreatedBy \[INT\] AS
-  
-  BEGIN
-  
-  DECLARE @CreatedOn DATETIME,
-  
-  @Execution VARCHAR(50)
-  
-  SET @Execution=@ExecutionID+@Step
-  
-  SET @CreatedOn=GETDATE()
-  
-  INSERT INTO \[dbo\].\[Log\_SPExecution\]
-  
-  (\[LogID\],
-  
-  \[ExecutionID\],
-  
-  \[StoredProc\],
-  
-  \[Section\],
-  
-  \[StartTime\],
-  
-  \[Message\],
-  
-  \[Status\],
-  
-  \[CreatedOn\],
-  
-  \[CreatedBy\])
-  
-  VALUES (@Execution,
-  
-  @ExecutionID,
-  
-  @SP,
-  
-  @Section,
-  
-  @CreatedOn,
-  
-  @Message,
-  
-  @Status,
-  
-  @CreatedOn,
-  
-  @CreatedBy
-  
-  )
-  
-  END
-  
-  ![](media/image4.png){width="6.5in" height="0.7472222222222222in"}
-  -----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        CREATE PROC [dbo].[ETL_LogEvent] @SPName [VARCHAR](100),@StepName [VARCHAR](100) AS
+        BEGIN
+        
+        DECLARE @ID INT,
+                @EventDateTime Datetime
+        
+        SET @ID=(SELECT ISNULL(MAX(ID),0) FROM [dbo].[ETL_log])+1
+        SET @EventDateTime=GETDATE()
+        
+        INSERT INTO [APS_ETL_Framework].[dbo].[ETL_log]([ID],[SPName],[StepName],[EventDateTime]) 
+        VALUES(@ID,@SPName,@StepName,@EventDateTime)
+        
+        END;
+        CREATE PROC [dbo].[ExecutionLogStart] @ExecutionID [VARCHAR](50),@SP [VARCHAR](100),@Section [VARCHAR](100),@Step [CHAR](5),@Message [VARCHAR](500),@Status [VARCHAR](16),@CreatedBy [INT] AS
+        BEGIN
+        
+        DECLARE @CreatedOn DATETIME, 
+                @Execution VARCHAR(50)
+        
+        SET @Execution=@ExecutionID+@Step
+        
+        SET @CreatedOn=GETDATE()
+        
+        INSERT INTO [dbo].[Log_SPExecution]
+                    (
+        			 [LogID],
+        			 [ExecutionID],
+        			 [StoredProc],
+        			 [Section],
+        			 [StartTime],
+        			 [Message],
+        			 [Status],
+        			 [CreatedOn],
+        			 [CreatedBy])
+        VALUES      (
+        			 @Execution,
+        			 @ExecutionID,
+        			 @SP,
+        			 @Section,
+        			 @CreatedOn,
+        			 @Message,
+        			 @Status,
+        			 @CreatedOn,
+        			 @CreatedBy
+        	    ) 
+        END
+
+Figure - TODO
 
 ## 2. Script Generation Automation Framework
 
@@ -509,20 +379,16 @@ exporting data to Azure Blob Storage. **ExportToBlob-Part1.dsql**
 generates script for external tables but before execution you can specify a schema under which all these
 external tables will be created.
 
-  -----------------------------------------------------------
-  DECLARE @SchemaForExternalTable VARCHAR(255) = 'EXTSQLDW’
-  -----------------------------------------------------------
+	DECLARE @SchemaForExternalTable VARCHAR(255) = 'EXTSQLDW’
 
 This allows you to specify databases to consider during migration. You
 can specify one or more databases to consider in single execution. For
 each database you want to include, you need to one INSERT statement for
 each database as shown below:
 
-  -----------------------------------------------------------------
-  --step 2: define databases that you want to include
-  INSERT INTO DatabasesToInclude VALUES ('AdventureWorksPDW2012')
-  -----------------------------------------------------------------
-
+    	--step 2: define databases that you want to include
+  	        INSERT INTO DatabasesToInclude VALUES ('AdventureWorksPDW2012')
+  
 After execution of the above script, output should look like this:
 
 Figure 4 - Export - Dynamic Script Generation
@@ -542,9 +408,8 @@ example,
     between one specific character delimiter with the data in tables,
     you can make it multi-characters.
 
-  -------------------------------------------------------------------------------------------------------------------------
-  --step 1: define all parameters
-  DECLARE @FormatType VARCHAR(100) = 'DELIMITEDTEXT'
+	--step 1: define all parameters
+	DECLARE @FormatType VARCHAR(100) = 'DELIMITEDTEXT'
   DECLARE @FieldDelimiter VARCHAR(10) = '\^|\^'
   DECLARE @DateFormat VARCHAR(12) = 'MM/dd/yyyy'
   DECLARE @DataCompression VARCHAR(100) = 'org.apache.hadoop.io.compress.GzipCodec'
