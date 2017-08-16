@@ -10,6 +10,11 @@
 
 **Basawashree Vasmate**, Consultant
 
+**NOTE** - We have tested these scripts on these two PDW versions, if you are running it on older version than these, you might have to change at some place to make it run there.
+
+Microsoft SQL Server 2012 - 10.0.8015.0 (X64) Jul 5 2016 21:33:16 Copyright (c) Microsoft Corporation Parallel Data Warehouse (64-bit) on Windows NT 6.2 <X64> (Build 9200: )
+Microsoft SQL Server 2012 - 10.0.7932.0 (X64) Mar 5 2016 03:17:30 Copyright (c) Microsoft Corporation Parallel Data Warehouse (64-bit) on Windows NT 6.2 <X64> (Build 9200: )
+
 ## 1. Introduction
 In certain cases when you cannot use Polybase to export the data out from APS, you
 can use BCP method. This document talks about the tool which migrates
