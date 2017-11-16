@@ -12,6 +12,9 @@ photocopying, recording, or otherwise), or for any purpose, without the express 
 Microsoft may have patents, patent applications, trademarks, copyrights, or other intellectual property rights covering subject matter in this
 document. Except as expressly provided in any written license agreement from Microsoft, the furnishing of this document does not give you any
 license to these patents, trademarks, copyrights, or other intellectual property.
+
+****This process my result in slow processing for very large systems with 100's of tables. ****
+****We are aware of this issue and working on a resolution **** 
 **************************************************************************************/
 USE <<SQL DW DatabaseName>>;
 --step 1: define all parameters
