@@ -1,0 +1,85 @@
+Active,RunForEachDB,RunForEachTable,DBCCStatement,ExportFileName,SQLStatement
+1,1,0,0,ObjectCount,"select db_name() as DBName, s.name as SchemaName ,  o.type_desc, count(1) as ObjectCount, db_name() + '_' + s.name as row_key
+from sys.objects o
+inner join sys.schemas s 
+ON o.schema_id = s.schema_id
+group by s.name, o.type_desc
+UNION ALL
+select db_name() as DBName, s.name as SchemaName ,  'STAT' as type_desc, count(1) as ObjectCount, db_name() + '_' + s.name as row_key
+from sys.objects o
+inner join sys.schemas s 
+ON o.schema_id = s.schema_id
+inner join sys.stats  ss
+ON o.object_id = ss.object_id
+group by  s.name
+ORDER BY db_name(), s.name;"
+1,1,0,0,TableMetadata,"SELECT distinct db_name() as DBName, s.name as SchemaName, t.name as TableName, tdp.distribution_policy_desc,
+  CASE WHEN   cdp.distribution_ordinal=1 then c.name ELSE NULL END as DistCol,
+  i.type_desc as StorageType,
+  CASE WHEN count(p.rows)>1 THEN 'YES' ELSE 'NO' END as IsPartitioned,
+count(p.rows) as NumPartitions,
+sum(p.rows) as NumRows, db_name() + '_' + s.name + '_' + t.name as row_key
+FROM sys.tables AS t
+INNER JOIN sys.schemas AS s
+     ON t.schema_id = s.schema_id
+INNER JOIN sys.pdw_table_distribution_properties AS tdp 
+    ON t.object_id = tdp.object_id
+INNER JOIN sys.columns AS c 
+    ON t.object_id = c.object_id
+INNER JOIN sys.pdw_column_distribution_properties AS cdp 
+    ON c.object_id = cdp.object_id AND c.column_id = cdp.column_id
+--note rowcount from sys.partitions assumes PDW stats are accurate
+--to get stats from nodes use pdw_nodes_partitions instead 
+INNER JOIN sys.partitions p
+ ON t.object_id = p.object_id
+INNER JOIN sys.indexes i 
+ ON  t.object_id = i.object_id
+WHERE (tdp.distribution_policy_desc<>'HASH' or  cdp.distribution_ordinal=1) AND
+ i.index_ID<2
+GROUP BY s.name, t.name, tdp.distribution_policy_desc, cdp.distribution_ordinal, c.name, i.type_desc
+ORDER BY db_name(),S.name, t.name"
+1,0,0,0,Version,Select @@version as 'Version'
+1,1,1,0,Tables,Select 1
+1,1,1,1,ShowSpaceUsed,PDW_ShowSpaceUsed
+1,0,0,0,Distributions,"select count(distinct pdw_node_id) Nodes, count(distribution_id) Distributions from sys.pdw_distributions"
+0,1,0,0,TablesToScript,"Declare @ServerName varchar(50)= '10.###.222.###'
+Declare @OutputDir varchar(50)= 'C:\APS2SQLDW\Output\1_CreateMPPScripts\' 
+
+Select '1' as Active, @ServerName as ServerName, 
+db_name()  as DatabaseName, s.name as SchemaName, 'DDL' as WorkMode,
+@OutputDir + db_name() + '\Tables\' as OutputFolderPath,
+s.name + '_'+ t.name as FileName, 'Full' as Mode, 
+s.name + '.'+ t.name as 'ObjectName', 'TABLE' as ObjectsToScript 
+from sys.tables t 
+inner join sys.schemas s 
+on t.schema_id = s.schema_id 
+inner join sys.databases d
+on d.name = db_name()  and t.type_desc = 'USER_TABLE' 
+and t.temporal_type_desc ='NON_TEMPORAL_TABLE' 
+and t.object_id not in (select object_id from sys.external_tables)"
+0,1,0,0,ViewsToScript,"Declare @ServerName varchar(50)= '10.###.222.###'
+Declare @OutputDir varchar(50)= 'C:\APS2SQLDW\Output\1_CreateMPPScripts\' 
+
+Select '1' as Active, @ServerName as ServerName, 
+db_name() as DatabaseName, s.name as SchemaName, 'DML' as WorkMode,
+@OutputDir + db_name() + '\Views\' as OutputFolderPath,
+s.name + '_'+ v.name as FileName, 'Full' as Mode, 
+s.name + '.'+ v.name as 'ObjectName', 'VIEW' as ObjectsToScript 
+from sys.views v
+inner join sys.schemas s 
+on v.schema_id = s.schema_id
+inner join sys.databases d
+on d.name = db_name() and v.type_desc = 'VIEW'"
+0,1,0,0,SPsToScript,"Declare @ServerName varchar(50)= '10.###.222.###'
+Declare @OutputDir varchar(50)= 'C:\APS2SQLDW\Output\1_CreateMPPScripts\' 
+
+Select '1' as Active, @ServerName as ServerName, 
+db_name() as DatabaseName, s.name as SchemaName, 'DML' as WorkMode,
+@OutputDir + db_name() + '\SPs\'  as OutputFolderPath,
+s.name + '_'+ o.name as FileName, 'Full' as Mode, 
+s.name + '.'+ o.name as 'ObjectName', 'SP' as ObjectsToScript 
+from sys.objects o
+inner join sys.schemas s 
+on o.schema_id = s.schema_id
+inner join sys.databases d
+on d.name = db_name()  and o.type_desc = 'SQL_STORED_PROCEDURE'"

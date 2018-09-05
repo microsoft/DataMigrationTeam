@@ -1,0 +1,5 @@
+"Active","ServerName","DatabaseName","FilePath","CreateSchema","ObjectType","SchemaAuth","SchemaName","ObjectName","DropIfExists","Variables","FileName"
+"1","yoursqlserver.database.windows.net","YourSqldwDatabaseName","C:\APS2SQLDW\Output\3_ChangeSchemas\adventure_works\SPs\","0","SP","","adw_dbo","SP_DimAccount","0","","dbo_SP_DimAccount_DML.dsql"
+"1","yoursqlserver.database.windows.net","YourSqldwDatabaseName","C:\APS2SQLDW\Output\3_ChangeSchemas\adventure_works\SPs\","0","SP","","adw_dbo","SP_DimCurrency","0","","dbo_SP_DimCurrency_DML.dsql"
+"1","yoursqlserver.database.windows.net","YourSqldwDatabaseName","C:\APS2SQLDW\Output\3_ChangeSchemas\adventure_works\SPs\","0","SP","","adw_dbo","SP_DimCustomer","0","","dbo_SP_DimCustomer_DML.dsql"
+"1","yoursqlserver.database.windows.net","YourSqldwDatabaseName","C:\APS2SQLDW\Output\3_ChangeSchemas\adventure_works\SPs\","0","SP","","adw_dbo","SP_Test_ChangeSchemas","0","","dbo_SP_Test_ChangeSchemas_DML.dsql"

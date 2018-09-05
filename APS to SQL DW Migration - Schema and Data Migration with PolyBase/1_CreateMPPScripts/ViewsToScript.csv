@@ -1,0 +1,3 @@
+Active,ServerName,DatabaseName,SchemaName,WorkMode,OutputFolderPath,FileName,Mode,ObjectName,ObjectsToScript
+1,10.###.220.###,adventure_works,dbo,DML,C:\APS2SQLDW\Output\1_CreateMPPScripts\adventure_works\Views\,dbo_viewDimAccount,Full,dbo.viewDimAccount,VIEW
+1,10.###.220.###,adventure_works,dbo,DML,C:\APS2SQLDW\Output\1_CreateMPPScripts\adventure_works\Views\,dbo_viewDimCustomer,Full,dbo.viewDimCustomer,VIEW

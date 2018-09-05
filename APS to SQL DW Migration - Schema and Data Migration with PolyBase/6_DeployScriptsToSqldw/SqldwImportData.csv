@@ -1,0 +1,7 @@
+Active,ServerName,DatabaseName,FilePath,CreateSchema,ObjectType,SchemaAuth,SchemaName,ObjectName,DropIfExists,Variables,FileName
+0,sqlserver.database.windows.net,sqldwname,C:\Step4Output\ImportSQLDW,0,EXT,,adw_dbo,DatabaseLog,0,,adventure_works_dbo_ext_DatabaseLog.dsql
+1,sqlserver.database.windows.net,sqldwname,C:\Step4Output\ImportSQLDW,0,EXT,,adw_dbo,DimAccount,0,,adventure_works_dbo_ext_DimAccount.dsql
+1,sqlserver.database.windows.net,sqldwname,C:\Step4Output\ImportSQLDW,0,EXT,,adw_dbo,DimCustomer,0,,adventure_works_dbo_ext_DimCustomer.dsql
+1,sqlserver.database.windows.net,sqldwname,C:\Step4Output\ImportSQLDW,0,EXT,,adw_testSchema,DimAccount,0,,adventure_works_testSchema_ext_DimAccount.dsql
+1,sqlserver.database.windows.net,sqldwname,C:\Step4Output\ImportSQLDW,0,EXT,,st_dbo,DimAccount,0,,stagedb_dbo_ext_DimAccount.dsql
+1,sqlserver.database.windows.net,sqldwname,C:\Step4Output\ImportSQLDW,0,EXT,,st_dbo,DimProduct,0,,stagedb_dbo_ext_DimProduct.dsql
