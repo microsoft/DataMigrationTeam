@@ -1,0 +1,13 @@
+Provides suggested “best fit” target platforms, cloud readiness and application/database remediation level for a given workload based
+
+Calculation is based on a set of 41 questions across 12 categories
+
+Each of the 41 questions has a prescribed set of possible answers based on drop-down controls
+
+Built using Excel and VBA.  Provides a simple, one-click calculation and report generation
+
+Greatly helps to accelerate large estate assessments by providing automated and uniform target platform decision process
+
+Generated report can be placed into assessment findings decks for migration assessment engagements
+
+Can provided structured approach and process for customer migration workshops
