@@ -1,0 +1,2 @@
+This tool is intended to provide guidance for converting a Netezza platform to Azure Data Warehouse(SQLDW). 
+This also provides a PowerShell script that will convert an extracted Netezza DDL to SQLDW.

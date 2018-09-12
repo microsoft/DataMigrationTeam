@@ -1,0 +1,3 @@
+These 3 scripts creates a resource group (create_rg.ps1), Sql Server to host Azure SQL DBs (create_sqlserver.ps1) 
+and Azure SQL DBs (create_sqldb.ps1). It includes loop capabilities so you can iterate and create as many databases 
+and sql servers as you want. 

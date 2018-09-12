@@ -1,0 +1,7 @@
+Set of 4 inventory scripts that collect Netezza database, object, and schema data about the databases on in the Netezza environment.
+
+Scripts are run from Netezza Linux command line.
+
+Scripts output to .csv files that can be taken and processed by a custom Excel workbook to build aggregations and summaries of .csv contents.
+
+Scripts and output help provide structured approach and process for customer Netezza migration workshops and assessments.

@@ -1,0 +1,454 @@
+
+
+PRINT '******Feature id: 1 To Find Audit Enablement************************'
+go
+
+sp_configure 'auditing'
+go
+
+PRINT '******Feature id: 4 & 5 To Find Sybase Total and Used database Size**********'
+go
+
+select sum(ceiling(sum(case when u.segmap != 4 then u.size/1048576.*@@maxpagesize end )) )as data_size,
+sum(ceiling(sum(case when u.segmap != 4 then size - curunreservedpgs(u.dbid, u.lstart, u.unreservedpgs) end)/1048576.*@@maxpagesize)) as data_used
+from master..sysdatabases d, master..sysusages u
+where u.dbid = d.dbid  and d.status != 256
+
+sp_helpdb               --- List all DB with its size & other enabled options
+go
+
+PRINT '******Feature id: 6 To Find Sybase Database Mail**********'
+go
+
+select convert(varchar(30),o.name) from sysobjects o where type = 'XP'
+go
+
+PRINT '******Feature id: 7 To Find Sybase Collation**********'
+go
+Exec sp_helpsort;
+go
+
+PRINT '******Feature id: 8 To Find Authentication**********'
+go
+
+sp_displaylogin
+go
+
+--Server level authentication:
+sp_displaylogin login_name  // it will show you the details about login if it exists.
+go
+(or)
+
+select name from master..syslogins
+go
+
+--Database level authentication
+
+use database_name
+go
+
+sp_helpuser user_name  // displays if the user exists in that particular database
+go
+
+sp_helprotect user_name  //displays the permissions of user on database objects
+go
+
+
+PRINT '******Feature id: 9 To Find Database Version**********'
+go
+
+select @@version  -- for DB server version inside DB
+go
+
+PRINT '******Feature id: 10 To Find Data Encryption**********'
+go
+sp_configure 'enable encrypted columns'
+go
+
+PRINT '******Feature id: 12 To Find Table partition**********'
+go
+
+Exec sp_helpartition;
+go
+
+PRINT '******Feature id: 13 To Find Database replication**********'
+go
+
+sp_setreptable                      -- checking all tables in the DB
+go 
+sp_setreptable 'username.tablename' -- checking the specific tables 
+go 
+
+use database_name
+go
+
+sp_help_rep_agent
+go 
+
+//it will show rep agent configuration if the db is enabled for replication. otherwise u will get a message saying that db is not configures 
+// (or) enabled for replication.
+
+use master
+go
+
+sp_config_rep_agent // shows the databases which are enabled for replication
+go
+
+
+PRINT '******Feature id: Feature id 14 To find Mirroring**********'
+go
+
+select cast(name as varchar(19)) NAME,cast(phyname as varchar(30) ) PHY_NAME,cast(mirrorname as varchar(30)) as MIRRORNAME from sysdevices
+go
+
+PRINT '******Feature id: 15 To Find Stored Procedure**********'
+go
+exec sp_stored_procedures '%' 
+select @@rowcount (14)
+select count (distinct id) from sysprocedures (28)
+------------------------------------------
+select count(1) from sysobjects where type = 'P'   -- Procedures
+select count(1) from sysobjects where type = 'U'   -- Use Defined Tables
+go
+
+PRINT '******Feature id: 16 To Find Memory Usage**********'
+go
+sp_monitorconfig "all"
+go
+
+PRINT '******Feature id: 17 To Find CPU Resource Usage**********'
+go
+
+sp_monitor;
+go
+
+PRINT '******Feature id: 20 To Find Views**********'
+go
+exec sp_tables '%', '%', 'master', "'VIEW'" 
+select @@rowcount
+go
+
+select count(1) from sysobjects where type = 'V'   -- Views
+go
+
+PRINT '******Feature id: 21 To Find Indexes**********'
+go
+
+select count(name) from sysindexes
+go
+
+PRINT '******Feature id: 23 To Find Database backup**********'
+go
+
+sp_dump_history 'list'
+go
+
+--To check last backup of a database you have to see the errorlog of backup server
+
+path: $SYBASE/ASE*/install/backup_server.log
+
+grep -i 'dump is completed (database' backup_server.log // u will get all backups time for all databases.
+
+grep -i 'dump is completed (database <db_name>' // for particular database
+
+sp_sysmon:
+
+--To generate the sysmon report:
+
+sp_sysmon '00:05:00' // it will run for 5 minutes.
+
+PRINT '******Feature id: 24 To Find Database Restore**********'
+go
+
+
+PRINT '******Feature id: 25 To Find Database logging**********'
+go
+
+Exec sp_helpdb;
+go
+
+PRINT '******Feature id: 26 To Find Trace Files**********'
+go
+
+set tracefile 'C:\\SYBASE\\SQL_TRACES' for spid
+go
+
+set tracefile off
+go
+
+PRINT '******Feature id: 27 To Traceflags**********'
+go
+DBCC traceflags
+go
+
+PRINT '******Feature id: 28 To Find Constraints**********'
+go
+ 
+select count(constrid) from sysconstraints
+go
+
+PRINT '******Feature id: 30 To Find Data Types**********'
+go
+
+SELECT count(*) FROM sysobjects 
+JOIN syscolumns ON sysobjects.id = syscolumns.id
+JOIN systypes ON systypes.type = syscolumns.type AND systypes.usertype = syscolumns.usertype;
+go
+
+PRINT '******Feature id: 36 To Find Logins/User Accounts**********'
+go
+
+select count(name) from sysusers
+go
+
+PRINT '******Feature id: 37 To Find Triggers**********'
+go
+
+select * from sysobjects where type = 'TR' 
+select convert(varchar(30),o.name) AS 'Triggers'
+from sysobjects o
+where type = 'TR'
+go
+
+/* TOOK IT FROM WEBSITE ---- NOT YET TESTED */
+
+select convert(varchar(30), name) as TableName,
+convert(varchar(30), isnull(object_name(instrig), '')) as InsertTriggerName,
+case sysstat2 & 1048576 when 0 then 'enabled' else 'disabled' end as InsertTriggerStatus,
+convert(varchar(30), isnull(object_name(updtrig), '')) as UpdateTriggerName,
+case sysstat2 & 4194304  when 0 then 'enabled' else 'disabled' end as UpdateTriggerStatus,
+convert(varchar(30), isnull(object_name(deltrig), '')) as DeleteTriggerName,
+case sysstat2 & 2097152  when 0 then 'enabled' else 'disabled' end as DeleteTriggerStatus
+from sysobjects where type='U' and (instrig<>0 or updtrig<>0 or deltrig<>0)
+order by name
+go
+
+
+PRINT '******Feature id: 39 To Find Privileges**********'
+go
+
+select u.name,v.name
+from sysprotects p, master.dbo.spt_values v, sysusers u
+where p.uid=u.uid
+
+and p.protecttype=1
+and v.type = 'T'
+and u.name!= 'dbo'
+go
+
+select count(*)from sysprotects p, master.dbo.spt_values v, sysusers u
+where p.uid=u.uid
+
+and p.protecttype=1
+and v.type = 'T'
+and u.name!= 'dbo'
+go
+
+PRINT '******Feature id: 42 To Find Tables**********'
+go
+
+exec sp_tables '%' 
+select @@rowcount
+go
+
+select count(convert(varchar(30),o.name)) from sysobjects o
+where type = 'U' 
+go
+
+PRINT '******Feature id: 49 To Find Cluster**********'
+go
+
+show cluster config
+go
+show cluster status
+go
+
+PRINT '******Feature id: 50 To find Column-level check constraint**********'
+go
+
+select * from sysconstraints where status = 0x0080
+go
+
+PRINT '******Feature id: 56 To Find Built-in-Functions**********'
+go
+
+select count(convert(varchar(30),o.name)) from sysobjects o
+where type = 'F'
+go
+
+PRINT '******Feature id: 57 To Find Locks**********'
+go
+
+sp_lock
+go
+
+PRINT '******Feature id: 60 To Find Row level access control**********'
+go
+
+sp_configure 'enable row level access'
+go
+
+
+PRINT '******Feature id: 62 To find Full Text Search**********'
+go
+
+sp_configure 'enable full-text search'
+go
+
+
+PRINT '******Feature id: 63 To Find User defined functions**********'
+go
+
+select s1.name, 
+        (select name 
+         from systypes s2 
+         where s2.usertype=(
+                            select min( s3.usertype) 
+                            from systypes s3 
+                            where  s3.hierarchy=s1.hierarchy)
+) base_type,  USER_NAME(s1.uid) as owner
+    from systypes s1
+go
+
+select s1.name, 
+        (select name 
+         from systypes s2 
+         where s2.usertype=(
+                            select min( s3.usertype) 
+                            from systypes s3 
+                            where  s3.hierarchy=s1.hierarchy)
+) base_type,  USER_NAME(s1.uid) as owner
+    from systypes s1
+go
+
+select count(convert(varchar(30),o.name)) from sysobjects o where type = 'SF'
+go
+
+
+PRINT '******Feature id: 64 Linked Servers**********'
+go
+select count(*) from master..sysservers where (srvclass <> 0 and srvclass <> 11) and (srvname <> 'SYB_BACKUP')
+go
+
+
+PRINT '******Feature id: 65 Service Broker**********'
+go
+
+sp_configure 'enable real time messaging'
+sp_msgadmin 'list'
+go
+
+
+PRINT '******Feature id: 66 To Find Processes **********'
+go
+
+select count(spid) from sysprocesses
+go
+
+
+PRINT '******Feature id: 73 To Find Log Archive**********'
+go
+
+select count(xactid) from syslogs
+go
+
+
+PRINT '******Feature id: 74 Instead of Triggers (only applicable for versions 15.0.2 and later)**********'
+go
+select count(*) from sysobjects where type = 'IT'
+go
+
+
+PRINT '******Feature id: 82 To Find Materalized Views**********'
+go
+
+SELECT b.object_id, b.table_name, a.option_id, c.option_name, a.option_value
+FROM SYSMVOPTION a, SYSTAB b, SYSMVOPTIONNAME c
+WHERE a.view_object_id=b.object_id
+AND b.table_type=2;
+go
+
+
+PRINT '******Feature id: 84 Parallel Query**********'
+go
+
+exec sp_configure 'number of worker processes'
+exec sp_configure 'max parallel degree'
+exec sp_configure 'max scan parallel degree'
+go
+
+
+PRINT '******Feature id: 90 To Find Streams**********'
+go
+
+CREATE OUTPUT STREAM Alerts 
+  SCHEMA 'alerts.ccs'
+  PROPERTIES 
+  GUARANTEED DELIVERY = ENABLE,
+  GUARANTEED DELIVERY MAXIMUM AGE = 10 MINUTES
+  FILTERCOLUMNS="User, Host";
+go
+
+
+PRINT '******Feature id: 95 To find all server components version inside DB**********'
+go
+
+sp_version
+go
+
+
+PRINT '******Feature id: 101 To Find Supplemental Logging**********'
+go
+
+select SUPPLEMENTAL_LOG_DATA_MIN, SUPPLEMENTAL_LOG_DATA_PK, SUPPLEMENTAL_LOG_DATA_UI from v$database;
+go
+
+
+PRINT '******Feature id: 102 Degree of Parallelism**********'
+go
+
+exec sp_configure 'max parallel degree'
+go
+
+
+PRINT '******Feature id: 103 Resource Profiler**********'
+go
+
+select count(*) from master..monTables
+go
+
+
+PRINT '******Feature id: 110 To Find Event Triggers**********'
+go
+
+select * from sysobjects where type = 'TR'
+go
+
+
+PRINT '******Feature id: 114 To Find Roles**********'
+go
+
+sp_displayroles;
+go
+
+
+PRINT '******Feature id: 115 To Find Cores**********'
+go
+
+select engine, status from sysengines
+go
+
+sp_lminfo
+go
+
+
+PRINT '******Feature id: 116 To Find Threads **********'
+go
+
+select count(ThreadID) from monThread
+go
+
+
+
+
+
