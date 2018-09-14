@@ -1,5 +1,0 @@
-"Active","ServerName","DatabaseName","FilePath","CreateSchema","ObjectType","SchemaAuth","SchemaName","ObjectName","DropIfExists","Variables","FileName"
-"1","yoursqlserver.database.windows.net","YourSqldwDatabaseName","C:\APS2SQLDW\Output\3_ChangeSchemas\stagedb\Tables\","0","Table","","st_dbo","DimAccount","0","","dbo_DimAccount_DDL.dsql"
-"1","yoursqlserver.database.windows.net","YourSqldwDatabaseName","C:\APS2SQLDW\Output\3_ChangeSchemas\stagedb\Tables\","0","Table","","st_dbo","DimCustomer","0","","dbo_DimCustomer_DDL.dsql"
-"1","yoursqlserver.database.windows.net","YourSqldwDatabaseName","C:\APS2SQLDW\Output\3_ChangeSchemas\stagedb\Tables\","0","Table","","st_dbo","DimProduct","0","","dbo_DimProduct_DDL.dsql"
-"1","yoursqlserver.database.windows.net","YourSqldwDatabaseName","C:\APS2SQLDW\Output\3_ChangeSchemas\stagedb\Tables\","0","Table","","st_dbo","t1","0","","dbo_t1_DDL.dsql"

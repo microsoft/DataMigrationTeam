@@ -1,7 +1,0 @@
-Active,ApsBaseDbName,SrcDir,OutDir,ObjectType
-1,adventure_works,C:\APS2SQLDW\Output\1_CreateMPPScripts\adventure_works\Tables\,C:\APS2SQLDW\Output\2_CleanScripts\adventure_works\Tables\,Table
-1,adventure_works,C:\APS2SQLDW\Output\1_CreateMPPScripts\adventure_works\Views\,C:\APS2SQLDW\Output\2_CleanScripts\adventure_works\Views\,View
-1,adventure_works,C:\APS2SQLDW\Output\1_CreateMPPScripts\adventure_works\SPs\,C:\APS2SQLDW\Output\2_CleanScripts\adventure_works\SPs\,SP
-1,stagedb,C:\APS2SQLDW\Output\1_CreateMPPScripts\stagedb\Tables\,C:\APS2SQLDW\Output\2_CleanScripts\stagedb\Tables\,Table
-1,stagedb,C:\APS2SQLDW\Output\1_CreateMPPScripts\stagedb\Views\,C:\APS2SQLDW\Output\2_CleanScripts\stagedb\Views\,View
-1,stagedb,C:\APS2SQLDW\Output\1_CreateMPPScripts\stagedb\SPs\,C:\APS2SQLDW\Output\2_CleanScripts\stagedb\SPs\,SP
