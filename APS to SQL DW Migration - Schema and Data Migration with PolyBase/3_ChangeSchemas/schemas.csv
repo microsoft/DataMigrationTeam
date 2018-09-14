@@ -1,4 +1,0 @@
-ApsDbName,ApsSchema,SQLDWSchema
-adventure_works,dbo,adw_dbo
-adventure_works,testSchema,adw_testSchema
-stagedb,dbo,st_dbo

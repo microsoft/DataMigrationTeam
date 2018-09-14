@@ -1,7 +1,0 @@
-Active,ServerName,DatabaseName,SchemaName,WorkMode,OutputFolderPath,FileName,Mode,ObjectName,ObjectsToScript
-1,10.###.220.###,INFORMATICA1,dbo,DML,C:\APS2SQLDW\Output\1_CreateMPPScripts\INFORMATICA1\SPs\,dbo_SafeCreateSchema,Full,dbo.SafeCreateSchema,SP
-1,10.###.220.###,INFORMATICA1,dbo,DML,C:\APS2SQLDW\Output\1_CreateMPPScripts\INFORMATICA1\SPs\,dbo_SafeCreateTable,Full,dbo.SafeCreateTable,SP
-1,10.###.220.###,adventure_works,dbo,DML,C:\APS2SQLDW\Output\1_CreateMPPScripts\adventure_works\SPs\,dbo_SP_DimAccount,Full,dbo.SP_DimAccount,SP
-1,10.###.220.###,adventure_works,dbo,DML,C:\APS2SQLDW\Output\1_CreateMPPScripts\adventure_works\SPs\,dbo_SP_DimCustomer,Full,dbo.SP_DimCustomer,SP
-1,10.###.220.###,adventure_works,dbo,DML,C:\APS2SQLDW\Output\1_CreateMPPScripts\adventure_works\SPs\,dbo_SP_DimCurrency,Full,dbo.SP_DimCurrency,SP
-1,10.###.220.###,adventure_works,dbo,DML,C:\APS2SQLDW\Output\1_CreateMPPScripts\adventure_works\SPs\,dbo_SP_Test_ChangeSchemas,Full,dbo.SP_Test_ChangeSchemas,SP

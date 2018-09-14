@@ -1,7 +1,0 @@
-Active,ServerName,DatabaseName,FilePath,CreateSchema,ObjectType,SchemaAuth,SchemaName,ObjectName,DropIfExists,Variables,FileName
-0,"""11.222.333.###,17001""",adventure_works,C:\Step4Output\ExportAPS,1,EXT,,ext_adw_dbo,ext_DatabaseLog,1,{@Var}=dev,adventure_works_dbo_ext_DatabaseLog.dsql
-1,"""11.222.333.###,17001""",adventure_works,C:\Step4Output\ExportAPS,1,EXT,,ext_adw_dbo,ext_DimAccount,1,{@Var}=dev,adventure_works_dbo_ext_DimAccount.dsql
-1,"""11.222.333.###,17001""",adventure_works,C:\Step4Output\ExportAPS,1,EXT,,ext_adw_dbo,ext_DimCustomer,1,{@Var}=dev,adventure_works_dbo_ext_DimCustomer.dsql
-1,"""11.222.333.###,17001""",adventure_works,C:\Step4Output\ExportAPS,1,EXT,,ext_adw_testSchema,ext_DimAccount,1,{@Var}=dev,adventure_works_testSchema_ext_DimAccount.dsql
-1,"""11.222.333.###,17001""",stagedb,C:\Step4Output\ExportAPS,1,EXT,,ext_st_dbo,ext_DimAccount,1,{@Var}=dev,stagedb_dbo_ext_DimAccount.dsql
-1,"""11.222.333.###,17001""",stagedb,C:\Step4Output\ExportAPS,1,EXT,,ext_st_dbo,ext_DimProduct,1,{@Var}=dev,stagedb_dbo_ext_DimProduct.dsql

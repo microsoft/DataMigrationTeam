@@ -1,3 +1,0 @@
-"Active","ServerName","DatabaseName","FilePath","CreateSchema","ObjectType","SchemaAuth","SchemaName","ObjectName","DropIfExists","Variables","FileName"
-"1","yoursqlserver.database.windows.net","YourSqldwDatabaseName","C:\APS2SQLDW\Output\3_ChangeSchemas\adventure_works\Views\","0","View","","adw_dbo","viewDimAccount","0","","dbo_viewDimAccount_DML.dsql"
-"1","yoursqlserver.database.windows.net","YourSqldwDatabaseName","C:\APS2SQLDW\Output\3_ChangeSchemas\adventure_works\Views\","0","View","","adw_dbo","viewDimCustomer","0","","dbo_viewDimCustomer_DML.dsql"
