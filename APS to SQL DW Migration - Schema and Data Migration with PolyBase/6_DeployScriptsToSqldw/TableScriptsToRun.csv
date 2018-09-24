@@ -1,3 +1,3 @@
 Active,ServerName,DatabaseName,FilePath,CreateSchema,ObjectType,SchemaAuth,SchemaName,ObjectName,DropIfExists,Variables,FileName
-0,lasr-sqldwdb-dev1.database.windows.net,lasr-sqldwdb-dev1,W:\APSScripts\TableScripts,1,SCHEMA,OZ_DEV_AA00002640_ROLE_DEVS,CC_I_SHARED_NS,,0,,Schema_CC_I_SHARED_NS.dsql
-0,lasr-sqldwdb-dev1.database.windows.net,lasr-sqldwdb-dev1,W:\APSScripts\TableScripts,1,SCHEMA,OZ_DEV_AA00002640_ROLE_DEVS,CC_W_Reusables_NS,,0,,Schema_CC_W_Reusables_NS.dsql
+0,AzureDWAddress,AzureDWDBName,W:\APSScripts\TableScripts,1,SCHEMA,SchemaRole,ObjectName,,0,,FileName1.dsql
+0,AzureDWAddress,AzureDWDBName,W:\APSScripts\TableScripts,1,SCHEMA,SchemaRole,ObjectName,,0,,FileName2.dsql

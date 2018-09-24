@@ -6,7 +6,7 @@ OneSqldwObjectsConfigFileName,OneSqldwObjectsConfigFile_Generated.csv
 OneSqldwImportConfigFileName,OneSqldwImportConfigFile_Generated.csv
 OneSqldwExtTablesConfigFileName,OneSqldwExtTablesConfigFile_Generated.csv
 ActiveFlag,1
-ApsServerName,"""10.222.333.1111,17001"" "
+ApsServerName,"""ServerIP,Port"" "
 SqldwServerName,yoursqlserver.database.windows.net 
 SqldwDatabaseName,YourSqldwDatabaseName 
 ApsExportScriptsFolder,C:\APS2SQLDW\Output\4_CreateAPSExportScriptSQLDWImportScript\ExportAPS\
