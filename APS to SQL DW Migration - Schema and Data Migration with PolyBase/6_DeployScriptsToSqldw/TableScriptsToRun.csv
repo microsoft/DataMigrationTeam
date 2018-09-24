@@ -1,3 +1,0 @@
-Active,ServerName,DatabaseName,FilePath,CreateSchema,ObjectType,SchemaAuth,SchemaName,ObjectName,DropIfExists,Variables,FileName
-0,AzureDWAddress,AzureDWDBName,W:\APSScripts\TableScripts,1,SCHEMA,SchemaRole,ObjectName,,0,,FileName1.dsql
-0,AzureDWAddress,AzureDWDBName,W:\APSScripts\TableScripts,1,SCHEMA,SchemaRole,ObjectName,,0,,FileName2.dsql
