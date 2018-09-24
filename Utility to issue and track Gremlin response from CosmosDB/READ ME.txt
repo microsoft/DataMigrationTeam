@@ -1,0 +1,2 @@
+Console app that connects to Cosmos DB graph and allows the execution of Gremlin commands,
+shows the results and times the response. 

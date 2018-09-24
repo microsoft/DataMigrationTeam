@@ -1,0 +1,7 @@
+An inventory scripts that collects information from a Teradata system about databases, objects, columns and space at database and table level
+
+Scripts are ran from an ODBC client (e.g., SQL Assistant), JDBC client (e.g., Teradata Studio) or native BTEQ client
+
+Output can be exported to .csv file by adjusting the configuration of the client used to run the scripts
+
+Scripts and output help provide structured approach and process for customer Teradata migration workshops and assessments
