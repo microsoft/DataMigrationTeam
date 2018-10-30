@@ -1,0 +1,34 @@
+{
+    "properties": {
+        "linkedServiceName": {
+            "referenceName": "AzureStorageLinkedService",
+            "type": "LinkedServiceReference"
+        },
+        "parameters": {
+            "BlobDirectory": {
+                "type": "String"
+            },
+            "BlobTableName": {
+                "type": "String"
+            }
+        },
+        "folder": {
+            "name": "BulkCopy"
+        },
+        "type": "AzureBlob",
+        "typeProperties": {
+            "format": {
+                "type": "OrcFormat"
+            },
+            "fileName": {
+                "value": "@dataset().BlobTableName",
+                "type": "Expression"
+            },
+            "folderPath": {
+                "value": "@dataset().BlobDirectory",
+                "type": "Expression"
+            }
+        }
+    },
+    "type": "Microsoft.DataFactory/factories/datasets"
+}

@@ -1,0 +1,14 @@
+{
+    "properties": {
+        "description": "Share for Database",
+        "type": "FileServer",
+        "typeProperties": {
+            "host": "\\\\<Server>\\<ShareName>",
+            "userId": "<Domain>\\<UserName>",
+            "password": {
+                "type": "SecureString",
+                "value": "<password>"    
+        }
+    }
+}
+}

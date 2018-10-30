@@ -1,0 +1,95 @@
+﻿/**************************************************************************************
+The information contained in this document represents the current view of Microsoft Corporation on the issues discussed as of the date of
+publication. Because Microsoft must respond to changing market conditions, this document should not be interpreted to be a commitment on the
+part of Microsoft, and Microsoft cannot guarantee the accuracy of any information presented after the date of publication.
+
+This document is for informational purposes only. MICROSOFT MAKES NO WARRANTIES, EXPRESS, IMPLIED, OR STATUTORY, AS TO THE INFORMATION IN THIS DOCUMENT.
+
+Complying with all applicable copyright laws is the responsibility of the user. Without limiting the rights under copyright, no part of this
+document may be reproduced, stored in or introduced into a retrieval system, or transmitted in any form or by any means (electronic, mechanical,
+photocopying, recording, or otherwise), or for any purpose, without the express written permission of Microsoft Corporation.
+
+Microsoft may have patents, patent applications, trademarks, copyrights, or other intellectual property rights covering subject matter in this
+document. Except as expressly provided in any written license agreement from Microsoft, the furnishing of this document does not give you any
+license to these patents, trademarks, copyrights, or other intellectual property.
+*************************************************************************************
+History
+Date		Name			Version	Description			
+03/27/2017	Arshad Ali		0.1		Created
+07/06/2018 	Mike Boswell	0.2		Cloud Solution Architect	Changed to pull from SQL DW
+07/10/2018	Mike Boswell	0.3		Added CTAS and Blob Paths
+07/10/2018	Mike Boswell	0.3		Removed DB Name
+**************************************************************************************/
+DECLARE @DatabaseName VARCHAR(255)
+DECLARE @DatabaseNameWithSchema VARCHAR(255)
+DECLARE @blobpath VARCHAR(255)
+DECLARE @SqlQuery VARCHAR(8000)
+DECLARE @SqlQuery1 VARCHAR(8000)
+DECLARE @SqlQuery2 VARCHAR(8000)
+DECLARE @SqlQuery3 VARCHAR(8000)
+DECLARE @SqlQuery4 VARCHAR(8000)
+DECLARE @SqlQuery5 VARCHAR(8000)
+DECLARE @SqlQuery6 VARCHAR(8000)
+DECLARE @SchemaName VARCHAR(255)
+DECLARE @TableName VARCHAR(255)
+
+set nocount on
+
+create table dbo.TablesExt
+(
+	objectname varchar(255),
+	scriptPart1 varchar(1000),
+	scriptPart2 varchar(7250),
+	scriptPart3 varchar(7250),
+	scriptPart4 varchar(7250),
+	scriptPart5 varchar(7250),
+	scriptPart6 varchar(1000)
+)
+
+SET @SqlQuery = 'insert into dbo.TablesExt select [objectname],
+scriptPart1, 
+scriptPart2, 
+scriptPart3,
+scriptPart4,
+scriptPart5,
+scriptPart6
+from ScriptOutput where objecttype=''ctas'''
+EXEC(@SqlQuery)
+
+WHILE EXISTS (SELECT TOP 1
+    [objectname]
+FROM dbo.TablesExt)
+BEGIN
+    SET @TableName=(SELECT TOP 1
+        [objectname]
+    from dbo.TablesExt)
+    SET @SqlQuery1=(SELECT TOP 1
+        [scriptPart1]
+    from dbo.TablesExt)
+    SET @SqlQuery2=(SELECT TOP 1
+        [scriptPart2]
+    from dbo.TablesExt)
+    SET @SqlQuery3=(SELECT TOP 1
+        [scriptPart3]
+    from dbo.TablesExt)
+    SET @SqlQuery4= (SELECT TOP 1
+        [scriptPart4]
+    from dbo.TablesExt)
+    SET @SqlQuery5=(SELECT TOP 1
+        [scriptPart5]
+    from dbo.TablesExt)
+    SET @SqlQuery6=(SELECT TOP 1
+        [scriptPart6]
+    from dbo.TablesExt)
+    PRINT @SqlQuery1
+    PRINT @SqlQuery2
+    PRINT @SqlQuery3
+    PRINT @SqlQuery4
+    PRINT @SqlQuery5
+    PRINT @SqlQuery6
+    DELETE FROM dbo.TablesExt WHERE [objectname] = @TableName
+END
+
+drop table dbo.TablesExt
+
+
