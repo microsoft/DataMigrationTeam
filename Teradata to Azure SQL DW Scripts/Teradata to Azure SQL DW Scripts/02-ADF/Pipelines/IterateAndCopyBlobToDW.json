@@ -1,0 +1,87 @@
+{
+    "properties": {
+        "activities": [
+            {
+                "name": "IterateSQLTables",
+                "type": "ForEach",
+                "typeProperties": {
+                    "items": {
+                        "value": "@pipeline().parameters.tablelist",
+                        "type": "Expression"
+                    },
+                    "activities": [
+                        {
+                            "name": "CopyCSVtoSQLDW",
+                            "type": "Copy",
+                            "policy": {
+                                "timeout": "7.00:00:00",
+                                "retry": 0,
+                                "retryIntervalInSeconds": 30,
+                                "secureOutput": false
+                            },
+                            "typeProperties": {
+                                "source": {
+                                    "type": "BlobSource",
+                                    "recursive": true
+                                },
+                                "sink": {
+                                    "type": "SqlDWSink",
+                                    "allowPolyBase": true,
+                                    "writeBatchSize": 10000,
+                                    "preCopyScript": {
+                                        "value": "TRUNCATE TABLE [@{item().TABLE_SCHEMA}].[@{item().TABLE_NAME}]",
+                                        "type": "Expression"
+                                    },
+                                    "polyBaseSettings": {
+                                        "rejectValue": 0,
+                                        "rejectType": "value",
+                                        "useTypeDefault": false
+                                    }
+                                },
+                                "enableStaging": false,
+                                "dataIntegrationUnits": 0
+                            },
+                            "inputs": [
+                                {
+                                    "referenceName": "BlobDataset",
+                                    "type": "DatasetReference",
+                                    "parameters": {
+                                        "BlobDirectory": {
+                                            "value": "@{item().TABLE_SCHEMA}",
+                                            "type": "Expression"
+                                        },
+                                        "BlobTableName": {
+                                            "value": "@{item().TABLE_NAME}.orc",
+                                            "type": "Expression"
+                                        }
+                                    }
+                                }
+                            ],
+                            "outputs": [
+                                {
+                                    "referenceName": "DWDestinationDataset",
+                                    "type": "DatasetReference",
+                                    "parameters": {
+                                        "DWTableName": {
+                                            "value": "[@{item().TABLE_SCHEMA}].[@{item().TABLE_NAME}]",
+                                            "type": "Expression"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    ]
+                }
+            }
+        ],
+        "parameters": {
+            "tablelist": {
+                "type": "Array"
+            }
+        },
+        "folder": {
+            "name": "BulkCopy"
+        }
+    },
+    "type": "Microsoft.DataFactory/factories/pipelines"
+}

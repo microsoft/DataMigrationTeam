@@ -1,0 +1,18 @@
+{
+    "properties": {
+        "type": "Teradata",
+        "typeProperties": {
+            "server": "<server>",
+            "authenticationType": "Basic",
+            "username": "<username>",
+            "password": {
+                "type": "SecureString",
+                "value": "<password>"
+            }
+        },
+        "connectVia": {
+            "referenceName": "<name of Integration Runtime>",
+            "type": "IntegrationRuntimeReference"
+        }
+    }
+}

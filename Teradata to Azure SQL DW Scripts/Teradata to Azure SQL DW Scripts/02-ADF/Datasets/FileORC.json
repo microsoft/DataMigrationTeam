@@ -1,0 +1,34 @@
+{
+    "properties": {
+        "linkedServiceName": {
+            "referenceName": "EncryptedFileLinkedService",
+            "type": "LinkedServiceReference"
+        },
+        "parameters": {
+            "FileDirectory": {
+                "type": "String"
+            },
+            "FileTableName": {
+                "type": "String"
+            }
+        },
+        "folder": {
+            "name": "BulkCopy"
+        },
+        "type": "FileShare",
+        "typeProperties": {
+            "format": {
+                "type": "OrcFormat"
+            },
+            "fileName": {
+                "value": "@dataset().FileTableName",
+                "type": "Expression"
+            },
+            "folderPath": {
+                "value": "@dataset().FileDirectory",
+                "type": "Expression"
+            }
+        }
+    },
+    "type": "Microsoft.DataFactory/factories/datasets"
+}

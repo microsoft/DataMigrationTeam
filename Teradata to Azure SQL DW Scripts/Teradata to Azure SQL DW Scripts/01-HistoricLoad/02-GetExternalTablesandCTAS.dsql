@@ -1,0 +1,308 @@
+/**************************************************************************************
+The information contained in this document represents the current view of Microsoft Corporation on the issues discussed as of the date of
+publication. Because Microsoft must respond to changing market conditions, this document should not be interpreted to be a commitment on the
+part of Microsoft, and Microsoft cannot guarantee the accuracy of any information presented after the date of publication.
+
+This document is for informational purposes only. MICROSOFT MAKES NO WARRANTIES, EXPRESS, IMPLIED, OR STATUTORY, AS TO THE INFORMATION IN THIS DOCUMENT.
+
+Complying with all applicable copyright laws is the responsibility of the user. Without limiting the rights under copyright, no part of this
+document may be reproduced, stored in or introduced into a retrieval system, or transmitted in any form or by any means (electronic, mechanical,
+photocopying, recording, or otherwise), or for any purpose, without the express written permission of Microsoft Corporation.
+
+Microsoft may have patents, patent applications, trademarks, copyrights, or other intellectual property rights covering subject matter in this
+document. Except as expressly provided in any written license agreement from Microsoft, the furnishing of this document does not give you any
+license to these patents, trademarks, copyrights, or other intellectual property.
+*************************************************************************************
+History
+Date		Name			Version	Description			
+03/27/2017	Arshad Ali		0.1		Created
+07/06/2018 	Mike Boswell	0.2		Cloud Solution Architect	Changed to pull from SQL DW
+07/10/2018	Mike Boswell	0.3		Added CTAS and Blob Paths
+07/10/2018	Mike Boswell	0.3		Removed DB Name
+**************************************************************************************/
+
+DECLARE @DatabaseName VARCHAR(255)
+DECLARE @DatabaseNameWithSchema VARCHAR(255)
+DECLARE @blobpath VARCHAR(255) 
+DECLARE @SqlQuery VARCHAR(8000)
+DECLARE @SqlQuery1 VARCHAR(8000)
+DECLARE @SqlQuery2 VARCHAR(8000)
+DECLARE @SqlQuery3 VARCHAR(8000)
+DECLARE @SqlQuery4 VARCHAR(8000)
+DECLARE @SqlQuery5 VARCHAR(8000)
+DECLARE @SqlQuery6 VARCHAR(8000)
+DECLARE @SchemaName VARCHAR(255)
+DECLARE @TableName VARCHAR(255)
+DECLARE @ColumnId AS INT
+DECLARE @ColumnName AS VARCHAR(255)
+DECLARE @ColumnType AS VARCHAR(255)
+DECLARE @ColumnMaxLength AS INT
+DECLARE @ColumnPrecision AS INT
+DECLARE @ColumnScale AS INT
+DECLARE @ColumnNullable AS INT
+DECLARE @ColumnDistributionOrdinal AS INT
+DECLARE @ColumnCollation AS VARCHAR(255)
+DECLARE @AllColumns AS VARCHAR(8000)
+DECLARE @AllColumns1 AS VARCHAR(8000)
+DECLARE @AllColumns2 AS VARCHAR(8000)
+DECLARE @AllColumns3 AS VARCHAR(8000)
+DECLARE @AllColumns4 AS VARCHAR(8000)
+DECLARE @AllColumns5 AS VARCHAR(8000)
+DECLARE @Data_Source AS VARCHAR(100)='ImportDataSource'
+--Provide Name of DataSource
+DECLARE @File_Format AS VARCHAR(100)='FastExportFormat'
+--Provide Name of FileFormat
+
+IF EXISTS(SELECT *
+FROM sys.tables
+WHERE name like 'ScriptOutput')
+	DROP TABLE ScriptOutput;
+CREATE TABLE ScriptOutput
+(
+	blobpath varchar(255),
+	objecttype varchar(255),
+	objectname varchar(255),
+	scriptPart1 varchar(1000),
+	scriptPart2 varchar(7250),
+	scriptPart3 varchar(7250),
+	scriptPart4 varchar(7250),
+	scriptPart5 varchar(7250),
+	scriptPart6 varchar(1000)
+)
+
+
+
+
+
+
+
+
+--Create schema script in SQL DW database
+IF EXISTS(SELECT *
+FROM sys.tables
+WHERE name like 'SchemaToProcess')
+		DROP TABLE SchemaToProcess;
+CREATE TABLE SchemaToProcess
+(
+	schemaname varchar(255)
+)
+
+SET @SqlQuery = 'INSERT INTO SchemaToProcess 
+	select name from sys.schemas'
+EXEC(@SqlQuery)
+
+WHILE EXISTS (SELECT TOP 1
+	schemaname
+FROM SchemaToProcess)
+	BEGIN
+	SET @SchemaName = (SELECT TOP 1
+		schemaname
+	FROM SchemaToProcess)
+	SET @DatabaseNameWithSchema = @SchemaName+ 'STG'
+	SET @SqlQuery = 'IF NOT EXISTS(SELECT * FROM sys.schemas WHERE name = ''' + @DatabaseNameWithSchema + ''')
+			EXEC(''CREATE SCHEMA [' + @DatabaseNameWithSchema + '] AUTHORIZATION dbo;'')'
+
+	INSERT INTO ScriptOutput
+		(objectname, objecttype, scriptPart1)
+	SELECT @SchemaName, 'schema', @SqlQuery
+	DELETE FROM SchemaToProcess WHERE schemaname = @SchemaName
+END
+
+--Create external table script for SQL DW database - Format : PDWDATABASE_PDWSCHEMA.TABLENAME
+IF EXISTS(SELECT *
+FROM sys.tables
+WHERE name like 'TablesToProcess')
+		DROP TABLE TablesToProcess;
+CREATE TABLE TablesToProcess
+(
+	schemaname varchar(255),
+	tablename varchar(255)
+)
+
+SET @SqlQuery = 'INSERT INTO TablesToProcess (schemaname, tablename) 
+	select top 30000 sc.name, so.name     
+	from sys.tables so  
+	join sys.schemas sc on so.schema_id = sc.schema_id  
+	left join sys.external_tables et on so.object_id = et.object_id    
+	where et.name is NULL and so.type = ''U'' order by so.name'
+
+EXEC(@SqlQuery)
+
+WHILE EXISTS (SELECT TOP 1
+	tablename
+FROM TablesToProcess)
+	BEGIN
+	SET @TableName = (SELECT TOP 1
+		tablename
+	FROM TablesToProcess)
+	SET @SchemaName = (SELECT TOP 1
+		schemaname
+	FROM TablesToProcess
+	WHERE tablename = @TableName)
+	---COLUMN INFORMATION - Starts
+	IF EXISTS(SELECT *
+	FROM sys.tables
+	WHERE name = 'MigrationTableColumns')
+			DROP TABLE MigrationTableColumns;
+	CREATE TABLE MigrationTableColumns
+	(
+		column_id int,
+		name varchar(255),
+		type varchar(255),
+		max_length int,
+		precision int,
+		scale int,
+		is_nullable int,
+		distribution_ordinal int,
+		collation_name varchar(255)
+	)
+
+	SET @SqlQuery = 'INSERT INTO MigrationTableColumns 
+		select top 1000 c.column_id, c.name, t.name as type, c.max_length, c.precision,
+		c.scale, c.is_nullable, d.distribution_ordinal, c.collation_name
+		from sys.columns c 
+		join sys.pdw_column_distribution_properties d on c.object_id = d.object_id 
+		and c.column_id = d.column_id join sys.types t on t.user_type_id = c.user_type_id 
+		where c.object_id = (select object_id from sys.tables T JOIN Sys.schemas S ON T.schema_id=S.schema_id WHERE S.name+ ''.'' + T.name = ''' + @SchemaName + ''' + ''.'' + ''' + @TableName + ''')  
+		order by Column_Id'
+	EXEC(@SqlQuery)
+
+	SET @AllColumns = CAST('' AS VARCHAR(8000))
+	SET @AllColumns1 = CAST('' AS VARCHAR(8000))
+	SET @AllColumns2 = CAST('' AS VARCHAR(8000))
+	SET @AllColumns3 = CAST('' AS VARCHAR(8000))
+
+	WHILE EXISTS (SELECT TOP 1
+		name
+	FROM MigrationTableColumns)
+		BEGIN
+		SET @ColumnId = (SELECT TOP 1
+			column_id
+		FROM MigrationTableColumns
+		ORDER BY column_id)
+		SET @ColumnName = (SELECT TOP 1
+			name
+		FROM MigrationTableColumns
+		WHERE column_id = @ColumnId)
+		SET @ColumnType = (SELECT TOP 1
+			type
+		FROM MigrationTableColumns
+		WHERE column_id = @ColumnId)
+		SET @ColumnMaxLength = (SELECT TOP 1
+			max_length
+		FROM MigrationTableColumns
+		WHERE column_id = @ColumnId)
+		SET @ColumnPrecision = (SELECT TOP 1
+			precision
+		FROM MigrationTableColumns
+		WHERE column_id = @ColumnId)
+		SET @ColumnScale = (SELECT TOP 1
+			scale
+		FROM MigrationTableColumns
+		WHERE column_id = @ColumnId)
+		SET @ColumnNullable = (SELECT TOP 1
+			is_nullable
+		FROM MigrationTableColumns
+		WHERE column_id = @ColumnId)
+		SET @ColumnDistributionOrdinal = (SELECT TOP 1
+			distribution_ordinal
+		FROM MigrationTableColumns
+		WHERE column_id = @ColumnId)
+		SET @ColumnCollation = (SELECT TOP 1
+			collation_name
+		FROM MigrationTableColumns
+		WHERE column_id = @ColumnId)
+
+		IF DATALENGTH(@AllColumns) > 7000
+			BEGIN
+			IF DATALENGTH(@AllColumns1)>0 AND DATALENGTH(@AllColumns2)>0
+			SET @AllColumns3=@AllColumns+','
+			ELSE IF DATALENGTH(@AllColumns1)>0
+			SET @AllColumns2=@AllColumns+','
+			ELSE 
+			SET @AllColumns1=@AllColumns+','
+
+			SET @AllColumns=CAST('' AS VARCHAR(8000))
+		END
+
+		IF DATALENGTH(@AllColumns) > 0
+			SET @AllColumns = @AllColumns + ', '
+
+		--COLUMN NAME and TYPE
+		SET @AllColumns = @AllColumns + CAST( QUOTENAME(@ColumnName) + ' ' + @ColumnType AS VARCHAR(8000))
+
+		--DECIMAL
+		IF @ColumnType IN ('DECIMAL')
+			BEGIN
+			SET @AllColumns = @AllColumns + CAST('(' + CONVERT(VARCHAR(10), @ColumnPrecision) + ',' + CONVERT(VARCHAR(10), @ColumnScale) + ')' AS VARCHAR(8000))
+		END
+		--DATETIME2
+		IF @ColumnType IN ('datetime2', 'datetimeoffset', 'time')
+			BEGIN
+			SET @AllColumns = @AllColumns +  CAST('(' + CONVERT(VARCHAR(10), @ColumnScale ) + ')' AS VARCHAR(8000))
+		END
+
+		--CHARACTER
+		IF @ColumnType IN ('CHAR', 'VARCHAR', 'NCHAR', 'NVARCHAR')
+			BEGIN
+			IF @ColumnType IN ('NCHAR', 'NVARCHAR')
+				SET @ColumnMaxLength = @ColumnMaxLength / 2
+			SET @AllColumns = @AllColumns +  CAST('(' + CONVERT(VARCHAR(10), @ColumnMaxLength) + ') COLLATE '+ @ColumnCollation  AS VARCHAR(8000))
+		END
+		--NULLABLE
+		IF @ColumnNullable = 1
+			SET @AllColumns = @AllColumns + CAST(' NULL' AS VARCHAR(8000))
+			ELSE
+			SET @AllColumns = @AllColumns + CAST(' NOT NULL' AS VARCHAR(8000))
+		--Put a Carriage Return into code
+		SET @AllColumns = @AllColumns +char(13)
+
+		DELETE FROM MigrationTableColumns WHERE column_id = @ColumnId
+	END
+	---COLUMN INFORMATION - Ends
+	SET @DatabaseNameWithSchema =@SchemaName+ 'STG'
+	--Custom Code
+
+	SET @SqlQuery = 'IF EXISTS(SELECT * FROM sys.external_tables WHERE schema_id = SCHEMA_ID(''' + @DatabaseNameWithSchema +''') AND name = ''' + @TableName + ''')   
+							DROP EXTERNAL TABLE [' + @DatabaseNameWithSchema + '].['+ @TableName + ']; '
+
+	SET @SqlQuery1 = @SqlQuery + CHAR(13) + ' CREATE EXTERNAL TABLE ['+ @DatabaseNameWithSchema +'].['+ @TableName +']'
+	SET @SqlQuery2='('+ @AllColumns1
+	SET @SqlQuery3= @AllColumns2
+	SET @SqlQuery4= @AllColumns3
+	SET @SqlQuery5= @AllColumns +')'+ CHAR(13)
+	SET @SqlQuery6='
+			WITH ( 
+				LOCATION = ''/' + @SchemaName + '/' + @TableName + '/''' + ',
+				DATA_SOURCE = '+@Data_Source+',
+				FILE_FORMAT = '+@File_Format+',
+				REJECT_TYPE = VALUE,
+				REJECT_VALUE = 20,
+				REJECTED_ROW_LOCATION = ''/' + @SchemaName + '/' + @TableName + '/REJECTED''' + '
+			);'
+
+	SET @blobpath='/' + @SchemaName + '/' + @TableName + '/'
+	INSERT INTO ScriptOutput
+		(blobpath, objectname, objecttype, scriptPart1,scriptPart2,scriptPart3,scriptPart4,scriptPart5,scriptPart6)
+	SELECT @blobpath, @TableName, 'table', @SqlQuery1, @SqlQuery2, @SqlQuery3, @SqlQuery4, @SqlQuery5, @SqlQuery6
+
+	/*CTAS Statement */
+	SET @SqlQuery1='CREATE TABLE ['+ @SchemaName +'].['+ @TableName +'] 
+	WITH   
+	(   
+		CLUSTERED COLUMNSTORE INDEX,  
+		DISTRIBUTION = ROUND_ROBIN  
+	)  
+	AS SELECT * FROM ['+ @DatabaseNameWithSchema +'].['+ @TableName +'];'
+	
+	INSERT INTO ScriptOutput
+		(objectname, objecttype, scriptPart1,scriptPart2,scriptPart3,scriptPart4,scriptPart5,scriptPart6)
+	SELECT @TableName, 'ctas', @SqlQuery1, '', '', '', '', ''
+
+
+
+	DELETE FROM TablesToProcess WHERE tablename = @TableName
+
+END
+GO
+
