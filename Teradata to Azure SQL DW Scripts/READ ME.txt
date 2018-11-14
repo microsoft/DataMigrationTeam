@@ -1,0 +1,8 @@
+Please refer to the document "Migrating from Teradata to Azure SQL Data Warehouse" for details on how to use the tool.
+
+That document gives insight into how to approach a Teradata to Azure SQL Data Warehouse migration. It is broken into sections which detail the migration phases,
+the preparation required for data migration including schema migration, migration of the business logic, the actual data migration approach and testing strategy. 
+The migration should pivot on six areas (one is optional but highly recommended) and, with the benefit of Azure, you can get ahead of the development curve by 
+quickly being able to provision Azure SQL Data Warehouses for your development team to start business object migration before the data is migrated.
+The use of an agile methodology, with focus on what must be delivered, to provide a working environment and any items that are “nice to haves” will achieve a 
+foundation from which to build upon within Azure.
