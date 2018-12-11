@@ -1,0 +1,14 @@
+SQL query that hits IBM DB2 system tables 
+- So far, only tested so far on IBM DB2 LUW version 11.1
+- Non-evasive query
+- Count of objects by schema and object type
+- Gives a rough estimate of ‘Raw Data’ in each schema
+- Provides a sizing of tables in each schema
+Results are stored in a CSV
+
+Benefits
+- Helps classify schemas (simple, moderate, complex, custom)
+- Helps target high-profile schemas for analysis
+- Helps identify user accounts too
+- Sizing information
+- Goes beyond identifying SSMA objects (only a couple, working on adding more)

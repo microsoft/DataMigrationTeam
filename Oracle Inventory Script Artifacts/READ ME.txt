@@ -1,0 +1,13 @@
+PL/SQL query that hits oracle system tables 
+- Non-evasive query
+- Count of objects by schema, object type and status
+- Gives a rough estimate of ‘Raw data’ in each schema
+- Provides a sizing of tables in each schema
+- Results are stored in a CSV
+
+Benefits
+- Helps classify schemas  (simple, moderate, complex, custom)
+- Helps target high-profile schemas for analysis
+- Helps identify user accounts too
+- Sizing information
+- Goes beyond identifying SSMA objects

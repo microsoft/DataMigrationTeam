@@ -1,0 +1,3 @@
+Creates a resource group, 1 or multiple sql servers to host one or multiple Azure SQL DBs,
+export every schema from a SQL Server (or multiple SQL Servers (2005+) on premises (or VM) and
+import it to Azure SQL DB 

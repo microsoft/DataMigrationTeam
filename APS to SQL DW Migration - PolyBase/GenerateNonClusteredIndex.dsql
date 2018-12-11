@@ -1,0 +1,141 @@
+﻿/**************************************************************************************
+The information contained in this document represents the current view of Microsoft Corporation on the issues discussed as of the date of
+publication. Because Microsoft must respond to changing market conditions, this document should not be interpreted to be a commitment on the
+part of Microsoft, and Microsoft cannot guarantee the accuracy of any information presented after the date of publication.
+
+This document is for informational purposes only. MICROSOFT MAKES NO WARRANTIES, EXPRESS, IMPLIED, OR STATUTORY, AS TO THE INFORMATION IN THIS DOCUMENT.
+
+Complying with all applicable copyright laws is the responsibility of the user. Without limiting the rights under copyright, no part of this
+document may be reproduced, stored in or introduced into a retrieval system, or transmitted in any form or by any means (electronic, mechanical,
+photocopying, recording, or otherwise), or for any purpose, without the express written permission of Microsoft Corporation.
+
+Microsoft may have patents, patent applications, trademarks, copyrights, or other intellectual property rights covering subject matter in this
+document. Except as expressly provided in any written license agreement from Microsoft, the furnishing of this document does not give you any
+license to these patents, trademarks, copyrights, or other intellectual property.
+*************************************************************************************
+History
+Date		Name			Description			
+03/31/2017	Arshad Ali		Created
+*************************************************************************************
+
+*/
+USE master;
+IF EXISTS(SELECT * FROM sys.databases WHERE name like 'APSMigration')
+	DROP DATABASE APSMigration;
+
+CREATE DATABASE APSMigration
+WITH   
+   (REPLICATED_SIZE = 2 GB,  
+   DISTRIBUTED_SIZE = 2 GB,  
+   LOG_SIZE = 5 GB );  
+
+USE APSMigration;
+DECLARE @SqlQuery VARCHAR(8000)
+DECLARE @DatabaseName VARCHAR(255) 
+DECLARE @SchemaName VARCHAR(255)
+DECLARE @TableName VARCHAR(255)
+DECLARE @ColumnName VARCHAR(255)
+DECLARE @DescendingKey INT
+DECLARE @IndexType INT
+DECLARE @KeyOrdinal INT
+DECLARE @IndexDefinition AS VARCHAR(2000)
+
+IF EXISTS(SELECT * FROM sys.tables WHERE name like 'DatabasesToInclude')
+	DROP TABLE DatabasesToInclude;
+CREATE TABLE DatabasesToInclude (databasename varchar(255));
+INSERT INTO DatabasesToInclude VALUES ('AdventureWorksPDW2012')
+
+IF EXISTS(SELECT * FROM tempdb.sys.tables WHERE name like 'DatabasesToProcess%')
+	DROP TABLE DatabasesToProcess;
+CREATE TABLE DatabasesToProcess (databasename varchar(255))
+
+IF EXISTS(SELECT * FROM sys.tables WHERE name like 'ScriptOutput')
+	DROP TABLE ScriptOutput;
+CREATE TABLE ScriptOutput (databasename varchar(255), objecttype varchar(255), objectname varchar(255), script varchar(8000))
+
+
+INSERT INTO DatabasesToProcess 
+SELECT name FROM sys.databases WHERE name IN (SELECT databasename FROM DatabasesToInclude)
+
+WHILE EXISTS (SELECT TOP 1 databasename FROM DatabasesToProcess)
+BEGIN
+	SET @DatabaseName = (SELECT TOP 1 databasename FROM DatabasesToProcess)
+
+	--Create external table script for SQL DW database - Format : PDWDATABASE_PDWSCHEMA.TABLENAME
+	IF EXISTS(SELECT * FROM sys.tables WHERE name like 'TablesToProcess')
+		DROP TABLE TablesToProcess;
+	CREATE TABLE TablesToProcess (schemaname varchar(255), tablename varchar(255), distributionpolicy int)
+
+	SET @SqlQuery = 'INSERT INTO TablesToProcess (schemaname, tablename, distributionpolicy) 
+	select sc.name, so.name , tp.distribution_policy    
+	from ' + @DatabaseName + '.sys.tables so  
+	join ' + @DatabaseName + '.sys.schemas sc on so.schema_id = sc.schema_id  
+	join ' + @DatabaseName + '.sys.pdw_table_distribution_properties tp ON so.object_id = tp.object_id 
+	left join ' + @DatabaseName + '.sys.external_tables et on so.object_id = et.object_id    
+	where et.name is NULL and so.type = ''U'' order by so.name' 
+
+	SELECT @SqlQuery
+	EXEC(@SqlQuery)
+	WHILE EXISTS (SELECT TOP 1 tablename FROM TablesToProcess)
+	BEGIN
+		SET @TableName = (SELECT TOP 1 tablename FROM TablesToProcess)
+		SET @SchemaName = (SELECT TOP 1 schemaname FROM TablesToProcess WHERE tablename = @TableName)
+
+		--CLUSTER INDEX - Starts
+		IF EXISTS(SELECT * FROM sys.tables WHERE name = 'TableIndex')
+			DROP TABLE TableIndex;
+		CREATE TABLE TableIndex (key_ordinal int, index_name varchar(255), column_name varchar(255), is_descending_key int)
+
+		SET @SqlQuery = 'INSERT INTO TableIndex
+		select i.key_ordinal, ix.name as index_name, c.name, i.is_descending_key 
+		from ' + @DatabaseName + '.sys.index_columns i 
+		join ' + @DatabaseName + '.sys.indexes ix on ix.index_id = i.index_id and ix.object_id = i.object_id 
+		join ' + @DatabaseName + '.sys.columns c on c.column_id = i.column_id  and c.object_id = ix.object_id 
+		where i.key_ordinal > 0 
+		and i.object_id = (select object_id from ' + @DatabaseName + '.sys.tables where schema_name(schema_id) + ''.'' + name = ''' + @SchemaName + ''' + ''.'' + ''' + @TableName + ''') 
+		and i.index_id > 1 
+		order by ix.name, key_ordinal'
+
+		SELECT @SqlQuery
+		EXEC (@SqlQuery) 
+		SET @IndexDefinition = ''
+		SET @ColumnName = ''
+		WHILE EXISTS (SELECT TOP 1 name FROM TableIndex)
+		BEGIN
+			SET @ColumnName = (SELECT TOP 1 index_name FROM TableIndex ORDER BY key_ordinal)
+			SET @KeyOrdinal = (SELECT TOP 1 key_ordinal FROM TableIndex WHERE name = @ColumnName)
+			SET @DescendingKey = (SELECT TOP 1 is_descending_key FROM TableIndex WHERE name = @ColumnName)
+			SET @IndexType = (SELECT TOP 1 index_type FROM TableIndex WHERE name = @ColumnName)
+
+			IF @IndexType = 5
+			BEGIN
+				SET @IndexDefinition = 'CREATE CLUSTERED COLUMNSTORE INDEX [cci_' + @DatabaseName + '_' + @SchemaName + '_' + @TableName + '] ON [' + @DatabaseName + '_' + @SchemaName + '].[' + @TableName + '];' 
+				BREAK	
+			END	
+			IF @KeyOrdinal = 1
+				SET @IndexDefinition = 'CREATE CLUSTERED INDEX [ci_' + @DatabaseName + '_' + @SchemaName + '_' + @TableName + '] ON [' + @DatabaseName + '_' + @SchemaName + '].[' + @TableName + '] ('
+			ELSE
+				SET @IndexDefinition = @IndexDefinition + ', '
+
+			IF @DescendingKey = 1
+				SET @IndexDefinition = @IndexDefinition + QUOTENAME(@ColumnName) + ' DESC'
+			ELSE
+				SET @IndexDefinition = @IndexDefinition + QUOTENAME(@ColumnName) + ' ASC'
+
+			DELETE FROM TableIndex WHERE index_name = @ColumnName
+		END
+		IF @IndexType <> 5
+			SET @IndexDefinition = @IndexDefinition + ')'
+
+		---SELECT @IndexDefinition
+		DELETE FROM TablesToProcess WHERE tablename = @TableName
+	END
+	DELETE FROM DatabasesToProcess WHERE databasename = @DatabaseName
+END
+GO
+
+select * from ScriptOutput order by databasename asc, objecttype asc, objectname asc 
+
+USE master;
+IF EXISTS(SELECT * FROM sys.databases WHERE name like 'APSMigration')
+	DROP DATABASE APSMigration;
