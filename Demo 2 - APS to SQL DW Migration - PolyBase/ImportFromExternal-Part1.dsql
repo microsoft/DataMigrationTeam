@@ -1,0 +1,307 @@
+﻿/**************************************************************************************
+The information contained in this document represents the current view of Microsoft Corporation on the issues discussed as of the date of
+publication. Because Microsoft must respond to changing market conditions, this document should not be interpreted to be a commitment on the
+part of Microsoft, and Microsoft cannot guarantee the accuracy of any information presented after the date of publication.
+
+This document is for informational purposes only. MICROSOFT MAKES NO WARRANTIES, EXPRESS, IMPLIED, OR STATUTORY, AS TO THE INFORMATION IN THIS DOCUMENT.
+
+Complying with all applicable copyright laws is the responsibility of the user. Without limiting the rights under copyright, no part of this
+document may be reproduced, stored in or introduced into a retrieval system, or transmitted in any form or by any means (electronic, mechanical,
+photocopying, recording, or otherwise), or for any purpose, without the express written permission of Microsoft Corporation.
+
+Microsoft may have patents, patent applications, trademarks, copyrights, or other intellectual property rights covering subject matter in this
+document. Except as expressly provided in any written license agreement from Microsoft, the furnishing of this document does not give you any
+license to these patents, trademarks, copyrights, or other intellectual property.
+*************************************************************************************
+History
+Date		Name			Description			
+03/27/2017	Arshad Ali		Created
+**************************************************************************************/
+USE master;
+IF EXISTS(SELECT * FROM sys.databases WHERE name like 'APSMigration')
+	DROP DATABASE APSMigration;
+
+CREATE DATABASE APSMigration
+WITH   
+   (REPLICATED_SIZE = 2 GB,  
+   DISTRIBUTED_SIZE = 2 GB,  
+   LOG_SIZE = 5 GB );  
+
+USE APSMigration;
+DECLARE @SqlQuery VARCHAR(8000)
+DECLARE @SchemaName VARCHAR(255)
+DECLARE @TableName VARCHAR(255)
+DECLARE @ColumnId AS INT
+DECLARE @ColumnName AS VARCHAR(255)
+DECLARE @ColumnType AS VARCHAR(255)
+DECLARE @ColumnMaxLength AS INT
+DECLARE @ColumnPrecision AS INT
+DECLARE @ColumnScale AS INT
+DECLARE @ColumnNullable AS INT
+DECLARE @ColumnDistributionOrdinal AS INT
+DECLARE @ColumnCollation AS VARCHAR(255)
+--DECLARE @AllColumns AS VARCHAR(8000) 
+DECLARE @DescendingKey AS INT
+DECLARE @IndexType AS INT
+DECLARE @IndexDefinition AS VARCHAR(2000)
+DECLARE @DistributionInfo AS VARCHAR(255)
+DECLARE @DistributionType AS INT
+--DECLARE @DistributionKey AS VARCHAR(255)
+DECLARE @KeyOrdinal AS INT
+DECLARE @RangeType INT
+
+IF EXISTS(SELECT * FROM sys.tables WHERE name like 'DatabasesToInclude')
+	DROP TABLE DatabasesToInclude;
+CREATE TABLE DatabasesToInclude (databasename varchar(255));
+INSERT INTO DatabasesToInclude VALUES ('PROSTARLOSSDATAMART')
+--INSERT INTO DatabasesToInclude VALUES ('tempdb')
+
+IF EXISTS(SELECT * FROM sys.tables WHERE name like 'DatabasesToProcess%')
+	DROP TABLE DatabasesToProcess;
+CREATE TABLE DatabasesToProcess (databasename varchar(255))
+
+IF EXISTS(SELECT * FROM sys.tables WHERE name like 'ScriptOutput')
+	DROP TABLE ScriptOutput;
+CREATE TABLE ScriptOutput (databasename varchar(255), objecttype varchar(255), objectname varchar(255),script varchar(8000))
+
+
+INSERT INTO DatabasesToProcess 
+SELECT name FROM sys.databases WHERE name IN (SELECT databasename FROM DatabasesToInclude)
+
+DECLARE @DatabaseName VARCHAR(255) 
+DECLARE @DatabaseNameWithSchema VARCHAR(255) 
+
+WHILE EXISTS (SELECT TOP 1 databasename FROM DatabasesToProcess)
+BEGIN
+	SET @DatabaseName = (SELECT TOP 1 databasename FROM DatabasesToProcess)
+
+	--Create schema script in SQL DW database - Format : PDWDATABASE_PDWSCHEMA
+	IF EXISTS(SELECT * FROM sys.tables WHERE name like 'SchemaToProcess')
+		DROP TABLE SchemaToProcess;
+	CREATE TABLE SchemaToProcess (schemaname varchar(255))
+	
+	SET @SqlQuery = 'INSERT INTO SchemaToProcess 
+	select name from ' + @DatabaseName + '.sys.schemas' 
+	EXEC(@SqlQuery)
+	
+	--Create all new schema in SQL DW
+	WHILE EXISTS (SELECT TOP 1 schemaname FROM SchemaToProcess)
+	BEGIN
+		SET @SchemaName = (SELECT TOP 1 schemaname FROM SchemaToProcess)
+		SET @DatabaseNameWithSchema = REPLACE(@DatabaseName,'_COPY','') + '_' + @SchemaName --Custom Code
+
+		SET @SqlQuery = 'IF NOT EXISTS(SELECT * FROM ' + @DatabaseName + '.sys.schemas WHERE name = ''' + @DatabaseNameWithSchema + ''')
+			EXEC(''CREATE SCHEMA [' + @DatabaseNameWithSchema + '] AUTHORIZATION dbo;'')'
+		
+		INSERT INTO ScriptOutput (databasename, objectname, objecttype, script)
+		SELECT @DatabaseName, @SchemaName,'schema', @SqlQuery
+		DELETE FROM SchemaToProcess WHERE schemaname = @SchemaName
+	END
+
+	--Create external table script for SQL DW database - Format : PDWDATABASE_PDWSCHEMA.TABLENAME
+	IF EXISTS(SELECT * FROM sys.tables WHERE name like 'TablesToProcess')
+		DROP TABLE TablesToProcess;
+	CREATE TABLE TablesToProcess (schemaname varchar(255), tablename varchar(255), distributionpolicy int)
+
+	SET @SqlQuery = 'INSERT INTO TablesToProcess (schemaname, tablename, distributionpolicy) 
+	select sc.name, so.name , tp.distribution_policy    
+	from ' + @DatabaseName + '.sys.tables so  
+	join ' + @DatabaseName + '.sys.schemas sc on so.schema_id = sc.schema_id  
+	join ' + @DatabaseName + '.sys.pdw_table_distribution_properties tp ON so.object_id = tp.object_id 
+	left join ' + @DatabaseName + '.sys.external_tables et on so.object_id = et.object_id    
+	where et.name is NULL and so.type = ''U'' order by so.name' 
+
+	EXEC(@SqlQuery)
+
+	WHILE EXISTS (SELECT TOP 1 tablename FROM TablesToProcess)
+	BEGIN
+		SET @TableName = (SELECT TOP 1 tablename FROM TablesToProcess)
+		SET @SchemaName = (SELECT TOP 1 schemaname FROM TablesToProcess WHERE tablename = @TableName)
+		SET @DistributionType = (SELECT TOP 1 distributionpolicy FROM TablesToProcess WHERE tablename = @TableName)
+
+		-----DISTRIBUTION INFORMATION - Starts
+		IF @DistributionType = 4
+			SET @DistributionInfo = 'DISTRIBUTION = ROUND_ROBIN' 
+		ELSE IF @DistributionType = 3
+			SET @DistributionInfo = 'DISTRIBUTION = ROUND_ROBIN /*REPLICATE CHANGED TO ROUND_ROBIN*/'
+		ELSE IF @DistributionType = 2
+		BEGIN
+			IF EXISTS(SELECT * FROM sys.tables WHERE name = 'TableDistributionColumn')
+				DROP TABLE TableDistributionColumn;
+			CREATE TABLE TableDistributionColumn (column_id int, name varchar(255), distribution_ordinal int)
+			
+			SET @SqlQuery = 'INSERT INTO TableDistributionColumn 
+			select c.column_id, c.name, d.distribution_ordinal
+			from ' + @DatabaseName + '.sys.columns c 
+			join ' + @DatabaseName + '.sys.pdw_column_distribution_properties d on c.object_id = d.object_id 
+			and c.column_id = d.column_id join ' + @DatabaseName + '.sys.types t on t.user_type_id = c.user_type_id 
+			where d.distribution_ordinal = 1 and c.object_id = (select object_id from ' + @DatabaseName + '.sys.tables where schema_name(schema_id) + ''.'' + name = ''' + @SchemaName + ''' + ''.'' + ''' + @TableName + ''') 
+			order by Column_Id'
+
+			EXEC(@SqlQuery)
+
+			IF EXISTS (SELECT TOP 1 name FROM TableDistributionColumn)
+			BEGIN
+				SET @ColumnName = (SELECT TOP 1 name FROM TableDistributionColumn)
+				SET @DistributionInfo = 'DISTRIBUTION = HASH(' + QUOTENAME(@ColumnName) + '), HEAP' 
+			END
+			--SELECT @DistributionInfo
+		END
+		-----DISTRIBUTION INFORMATION - Ends
+
+		--CLUSTER INDEX - Starts
+		IF EXISTS(SELECT * FROM sys.tables WHERE name = 'TableIndex')
+			DROP TABLE TableIndex;
+		CREATE TABLE TableIndex (key_ordinal int, name varchar(255), is_descending_key int, index_type int)
+
+		SET @SqlQuery = 'INSERT INTO TableIndex 
+		select i.key_ordinal, c.name, i.is_descending_key, si.[type] as index_type 
+		from ' + @DatabaseName + '.sys.indexes si 
+		left join ' + @DatabaseName + '.sys.index_columns i on i.object_id = si.object_id 
+		left join ' + @DatabaseName + '.sys.columns c on c.column_id = i.column_id and c.object_id = i.object_id
+		where i.index_id = 1 and si.[type] <> 2 
+		and i.object_id = (select object_id from ' + @DatabaseName + '.sys.tables where schema_name(schema_id) + ''.'' + name = ''' + @SchemaName + ''' + ''.'' + ''' + @TableName + ''')  
+		order by key_ordinal'
+
+		EXEC (@SqlQuery) 
+		SET @IndexDefinition = ''
+		SET @ColumnName = ''
+		WHILE EXISTS (SELECT TOP 1 name FROM TableIndex)
+		BEGIN
+			SET @ColumnName = (SELECT TOP 1 name FROM TableIndex ORDER BY key_ordinal)
+			SET @KeyOrdinal = (SELECT TOP 1 key_ordinal FROM TableIndex WHERE name = @ColumnName)
+			SET @DescendingKey = (SELECT TOP 1 is_descending_key FROM TableIndex WHERE name = @ColumnName)
+			SET @IndexType = (SELECT TOP 1 index_type FROM TableIndex WHERE name = @ColumnName)
+			SET @DatabaseNameWithSchema = REPLACE(@DatabaseName,'_COPY','') + '_' + @SchemaName --Custom Code
+			IF @IndexType = 5
+			BEGIN
+				SET @IndexDefinition = 'CREATE CLUSTERED COLUMNSTORE INDEX [cci_' + @DatabaseNameWithSchema + '_' + @TableName + '] ON [' + @DatabaseNameWithSchema + '].[' + @TableName + '];' 
+				BREAK	
+			END	
+			IF @KeyOrdinal = 1
+				SET @IndexDefinition = 'CREATE CLUSTERED INDEX [ci_' + @DatabaseNameWithSchema + '_' + @TableName + '] ON [' + @DatabaseNameWithSchema + '].[' + @TableName + '] ('
+			ELSE
+				SET @IndexDefinition = @IndexDefinition + ', '
+
+			IF @DescendingKey = 1
+				SET @IndexDefinition = @IndexDefinition + QUOTENAME(@ColumnName) + ' DESC'
+			ELSE
+				SET @IndexDefinition = @IndexDefinition + QUOTENAME(@ColumnName) + ' ASC'
+
+			DELETE FROM TableIndex WHERE name = @ColumnName
+		END
+		IF @IndexType <> 5
+			SET @IndexDefinition = @IndexDefinition + ')'
+
+		---SELECT @IndexDefinition
+
+		--PARTITION - Starts
+		IF EXISTS(SELECT * FROM sys.tables WHERE name = 'PartitionInfo')
+			DROP TABLE PartitionInfo;
+
+		SET @SqlQuery = 'CREATE TABLE PartitionInfo
+		WITH (DISTRIBUTION = REPLICATE)
+		AS
+		SELECT (select top 1 c.name from  ' + @DatabaseName + '.sys.tables t 
+		join  ' + @DatabaseName + '.sys.indexes i on(i.object_id = t.object_id and i.index_id < 2) 
+		join  ' + @DatabaseName + '.sys.index_columns  ic on (ic.partition_ordinal > 0 and ic.index_id = i.index_id and ic.object_id = t.object_id) 
+		join  ' + @DatabaseName + '.sys.columns c on(c.object_id = ic.object_id and c.column_id = ic.column_id) 
+		where t.object_id = (select object_id from ' + @DatabaseName + '.sys.tables where schema_name(schema_id) + ''.'' + name = ''' + @SchemaName + ''' + ''.'' + ''' + @TableName + ''') 
+		) AS PartitionColumn, (select top 1 pf.boundary_value_on_right 
+		from ' + @DatabaseName + '.sys.partition_functions pf 
+		JOIN ' + @DatabaseName + '.sys.partition_schemes ps on pf.function_id=ps.function_id 
+		JOIN ' + @DatabaseName + '.sys.data_spaces ds on ps.data_space_id = ds.data_space_id 
+		JOIN ' + @DatabaseName + '.sys.indexes si on si.data_space_id = ds.data_space_id 
+		WHERE si.object_id = (select object_id from ' + @DatabaseName + '.sys.tables where schema_name(schema_id) + ''.'' + name = ''' + @SchemaName + ''' + ''.'' + ''' + @TableName + ''') 
+		) AS RangeType'
+		EXEC(@SqlQuery)
+
+		SET @ColumnName = (SELECT TOP 1 PartitionColumn FROM PartitionInfo)
+		SET @RangeType = (SELECT TOP 1 RangeType FROM PartitionInfo)
+
+		IF EXISTS(SELECT * FROM sys.tables WHERE name = 'TablePartition')
+			DROP TABLE TablePartition;
+
+		SET @SqlQuery = 'CREATE TABLE TablePartition
+		WITH (DISTRIBUTION = REPLICATE)
+		AS
+		select cast(sp.partition_number as int) as partition_number, cast(prv.value as varchar(255)) as boundary_value 
+		from ' + @DatabaseName + '.sys.tables st 
+		join ' + @DatabaseName + '.sys.indexes si on st.object_id = si.object_id and si.index_id <2 
+		join ' + @DatabaseName + '.sys.partitions sp on sp.object_id = st.object_id and sp.index_id = si.index_id 
+		join ' + @DatabaseName + '.sys.partition_schemes ps on ps.data_space_id = si.data_space_id 
+		join ' + @DatabaseName + '.sys.partition_range_values prv on prv.function_id = ps.function_id 
+		join ' + @DatabaseName + '.sys.partition_parameters pp on pp.function_id = ps.function_id 
+		join ' + @DatabaseName + '.sys.types sty on sty.user_type_id = pp.user_type_id and prv.boundary_id = sp.partition_number 
+		where st.object_id = (select object_id from ' + @DatabaseName + '.sys.tables where schema_name(schema_id) + ''.'' + name = ''' + @SchemaName + ''' + ''.'' + ''' + @TableName + ''')'
+
+		EXEC(@SqlQuery)
+
+		DECLARE @PartitionNumber INT
+		DECLARE @Boundary VARCHAR(255)
+		DECLARE @PartitionRange VARCHAR(8000)
+
+		SET @PartitionRange = ''
+		WHILE EXISTS (SELECT TOP 1 partition_number FROM TablePartition)
+		BEGIN
+			SET @PartitionNumber = (SELECT TOP 1 partition_number FROM TablePartition ORDER BY partition_number)
+			SET @Boundary = (SELECT TOP 1 boundary_value FROM TablePartition WHERE partition_number = @PartitionNumber)
+
+			IF DATALENGTH(@PartitionRange) > 0
+				SET @PartitionRange = @PartitionRange + ', ' + QUOTENAME(@Boundary)
+			ELSE
+				SET @PartitionRange = QUOTENAME(@Boundary) 
+
+			DELETE FROM TablePartition WHERE partition_number = @PartitionNumber
+		END
+
+		
+	--SELECT @PartitionRange
+
+		IF @RangeType = 1 
+			SET @PartitionRange = 'PARTITION (' + QUOTENAME(@ColumnName) + ' RANGE RIGHT FOR VALUES (' + @PartitionRange + '))'
+		ELSE
+			SET @PartitionRange = 'PARTITION (' + QUOTENAME(@ColumnName) + ' RANGE LEFT FOR VALUES (' + @PartitionRange + '))'
+
+		--SELECT @PartitionRange
+
+		--PARTITION - Ends
+		DECLARE @WithClause VARCHAR(8000)
+		SET @WithClause = ''
+		
+		IF DATALENGTH(@DistributionInfo) > 0
+			IF DATALENGTH(@WithClause) = 0
+				SET @WithClause = @DistributionInfo
+			ELSE
+				SET @WithClause = @WithClause + ', ' + @DistributionInfo
+		
+		IF DATALENGTH(@PartitionRange) > 0
+			IF DATALENGTH(@WithClause) = 0
+				SET @WithClause = @PartitionRange
+			ELSE
+				SET @WithClause = @WithClause + ', ' + @PartitionRange
+
+		SET @DatabaseNameWithSchema = REPLACE(@DatabaseName,'_COPY','') + '_' + @SchemaName --Custom Code
+
+		SET @SqlQuery = 'CREATE TABLE [' + @DatabaseNameWithSchema + '].[' + @TableName + ']
+		WITH (' + @WithClause + ' )
+		AS
+		SELECT * FROM [' +@DatabaseNameWithSchema+ '].[EXT_' + @TableName + '];'
+
+		--Rebuild clustered index
+		SET @SqlQuery = @SqlQuery + @IndexDefinition
+
+		INSERT INTO ScriptOutput (databasename, objectname, objecttype, script)
+		SELECT @DatabaseName, @TableName,'table', @SqlQuery	
+
+		DELETE FROM TablesToProcess WHERE tablename = @TableName
+			
+	END
+	DELETE FROM DatabasesToProcess WHERE databasename = @DatabaseName
+END
+GO
+select * from ScriptOutput order by databasename asc, objecttype asc, objectname asc 
+
+USE master;
+IF EXISTS(SELECT * FROM sys.databases WHERE name like 'APSMigration')
+	DROP DATABASE APSMigration;
