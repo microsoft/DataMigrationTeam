@@ -1,0 +1,88 @@
+﻿/**************************************************************************************
+The information contained in this document represents the current view of Microsoft Corporation on the issues discussed as of the date of
+publication. Because Microsoft must respond to changing market conditions, this document should not be interpreted to be a commitment on the
+part of Microsoft, and Microsoft cannot guarantee the accuracy of any information presented after the date of publication.
+
+This document is for informational purposes only. MICROSOFT MAKES NO WARRANTIES, EXPRESS, IMPLIED, OR STATUTORY, AS TO THE INFORMATION IN THIS DOCUMENT.
+
+Complying with all applicable copyright laws is the responsibility of the user. Without limiting the rights under copyright, no part of this
+document may be reproduced, stored in or introduced into a retrieval system, or transmitted in any form or by any means (electronic, mechanical,
+photocopying, recording, or otherwise), or for any purpose, without the express written permission of Microsoft Corporation.
+
+Microsoft may have patents, patent applications, trademarks, copyrights, or other intellectual property rights covering subject matter in this
+document. Except as expressly provided in any written license agreement from Microsoft, the furnishing of this document does not give you any
+license to these patents, trademarks, copyrights, or other intellectual property.
+*************************************************************************************
+History
+Date		Name			Description			
+03/27/2017	Arshad Ali		Created
+**************************************************************************************/
+--step 1: define all parameters
+USE <AnyUserDatabase>; --Switch to any user database before execution - other than master
+DECLARE @DropExternalTableAndSchema BIT = 0
+DECLARE @SchemaForExternalTable VARCHAR(255) = 'EXTSQLDW'
+
+DECLARE @DatabaseName VARCHAR(255)
+DECLARE @SchemaName VARCHAR(255)
+DECLARE @TableName VARCHAR(255)
+DECLARE @SqlQuery VARCHAR(8000)
+
+--step 2: Drop external tables and then schema
+IF (@DropExternalTableAndSchema = 1)
+BEGIN
+	IF EXISTS(SELECT * FROM sys.tables WHERE name like 'DatabasesToInclude')
+		DROP TABLE DatabasesToInclude;
+	CREATE TABLE DatabasesToInclude (databasename varchar(255));
+	INSERT INTO DatabasesToInclude VALUES ('AdventureWorksPDW2012')
+
+	IF EXISTS(SELECT * FROM sys.tables WHERE name like 'DatabasesToProces')
+		DROP TABLE DatabasesToProcess;
+	CREATE TABLE DatabasesToProcess (databasename varchar(255))
+
+	INSERT INTO DatabasesToProcess 
+	SELECT name FROM sys.databases WHERE name IN (SELECT databasename FROM DatabasesToInclude)
+
+	WHILE EXISTS (SELECT TOP 1 databasename FROM DatabasesToProcess)
+	BEGIN
+		SET @DatabaseName = (SELECT TOP 1 databasename FROM DatabasesToProcess)
+
+		IF EXISTS(SELECT * FROM sys.tables WHERE name like 'TablesToProcess')
+			DROP TABLE TablesToProcess;
+		CREATE TABLE TablesToProcess (schemaname varchar(255), tablename varchar(255))
+
+		SET @SqlQuery = 'INSERT INTO TablesToProcess (schemaname, tablename) 
+		select sc.name, so.name     
+		from ' + @DatabaseName + '.sys.tables so  
+		join ' + @DatabaseName + '.sys.schemas sc on so.schema_id = sc.schema_id  
+		left join ' + @DatabaseName + '.sys.external_tables et on so.object_id = et.object_id    
+		where et.name is NULL and so.type = ''U'' order by so.name' 
+		EXEC(@SqlQuery)
+
+		WHILE EXISTS (SELECT TOP 1 tablename FROM TablesToProcess)
+		BEGIN
+			SET @TableName = (SELECT TOP 1 tablename FROM TablesToProcess)
+			SET @SchemaName = (SELECT TOP 1 schemaname FROM TablesToProcess WHERE tablename = @TableName)
+
+			SET @SqlQuery = 'USE ' + @DatabaseName + '; IF EXISTS(SELECT * FROM sys.external_tables WHERE name = ''' + @SchemaName + '.' + @TableName + ''')
+				DROP EXTERNAL TABLE [' + @SchemaForExternalTable + '].[' + @SchemaName + '.' + @TableName + '];';
+			EXEC(@SqlQuery)
+
+			DELETE FROM TablesToProcess WHERE tablename = @TableName
+		END
+
+		SET @SqlQuery = 'USE ' + @DatabaseName + '; IF EXISTS(SELECT * FROM sys.schemas WHERE name = ''' + @SchemaForExternalTable + ''')
+		DROP SCHEMA [' + @SchemaForExternalTable + '];'
+		EXEC(@SqlQuery)
+		DELETE FROM DatabasesToProcess WHERE databasename = @DatabaseName
+	END
+END
+
+--step 3: Drop external file format
+SET @SqlQuery = 'IF EXISTS (SELECT * FROM sys.external_file_formats WHERE name = ''ff_textdelimited'')
+	DROP EXTERNAL FILE FORMAT ff_textdelimited;'
+EXEC(@SqlQuery);
+
+--step 4: Drop external data source which points to the right blob storage account and container. 
+SET @SqlQuery = 'IF EXISTS (SELECT * FROM sys.external_data_sources WHERE name = ''ds_blobstorage'')   
+	DROP EXTERNAL DATA SOURCE ds_blobstorage;'
+EXEC(@SqlQuery);
