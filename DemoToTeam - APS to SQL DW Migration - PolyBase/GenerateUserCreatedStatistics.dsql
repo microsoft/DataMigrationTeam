@@ -1,0 +1,76 @@
+﻿/**************************************************************************************
+The information contained in this document represents the current view of Microsoft Corporation on the issues discussed as of the date of
+publication. Because Microsoft must respond to changing market conditions, this document should not be interpreted to be a commitment on the
+part of Microsoft, and Microsoft cannot guarantee the accuracy of any information presented after the date of publication.
+
+This document is for informational purposes only. MICROSOFT MAKES NO WARRANTIES, EXPRESS, IMPLIED, OR STATUTORY, AS TO THE INFORMATION IN THIS DOCUMENT.
+
+Complying with all applicable copyright laws is the responsibility of the user. Without limiting the rights under copyright, no part of this
+document may be reproduced, stored in or introduced into a retrieval system, or transmitted in any form or by any means (electronic, mechanical,
+photocopying, recording, or otherwise), or for any purpose, without the express written permission of Microsoft Corporation.
+
+Microsoft may have patents, patent applications, trademarks, copyrights, or other intellectual property rights covering subject matter in this
+document. Except as expressly provided in any written license agreement from Microsoft, the furnishing of this document does not give you any
+license to these patents, trademarks, copyrights, or other intellectual property.
+*************************************************************************************
+History
+Date		Name			Description			
+03/31/2017	Arshad Ali		Created
+*************************************************************************************
+*/
+USE master;
+IF EXISTS(SELECT * FROM sys.databases WHERE name like 'APSMigration')
+	DROP DATABASE APSMigration;
+
+CREATE DATABASE APSMigration
+WITH   
+   (REPLICATED_SIZE = 2 GB,  
+   DISTRIBUTED_SIZE = 2 GB,  
+   LOG_SIZE = 5 GB );  
+
+USE APSMigration;
+DECLARE @SqlQuery VARCHAR(8000)
+DECLARE @DatabaseName VARCHAR(255) 
+
+IF EXISTS(SELECT * FROM sys.tables WHERE name like 'DatabasesToInclude')
+	DROP TABLE DatabasesToInclude;
+CREATE TABLE DatabasesToInclude (databasename varchar(255));
+INSERT INTO DatabasesToInclude VALUES ('AdventureWorksPDW2012')
+
+IF EXISTS(SELECT * FROM tempdb.sys.tables WHERE name like 'DatabasesToProcess%')
+	DROP TABLE DatabasesToProcess;
+CREATE TABLE DatabasesToProcess (databasename varchar(255))
+
+IF EXISTS(SELECT * FROM sys.tables WHERE name like 'ScriptOutput')
+	DROP TABLE ScriptOutput;
+CREATE TABLE ScriptOutput (databasename varchar(255), objecttype varchar(255), objectname varchar(255), script varchar(8000))
+
+
+INSERT INTO DatabasesToProcess 
+SELECT name FROM sys.databases WHERE name IN (SELECT databasename FROM DatabasesToInclude)
+
+WHILE EXISTS (SELECT TOP 1 databasename FROM DatabasesToProcess)
+BEGIN
+	SET @DatabaseName = (SELECT TOP 1 databasename FROM DatabasesToProcess)
+
+	SET @SqlQuery = 'INSERT INTO ScriptOutput (databasename, objectname, objecttype, script)
+	select ''' + @DatabaseName + ''', s.name as stat_name, ''statistics'', 
+	''CREATE STATISTICS ['' + s.name +''] ON [' + @DatabaseName + '_'' + sch.name + ''].['' + t.name + ''] (['' + c.name + '']);''
+	from ' + @DatabaseName + '.sys.stats s 
+	join ' + @DatabaseName + '.sys.stats_columns sc on s.stats_id = sc.stats_id and s.object_id = sc.object_id 
+	join ' + @DatabaseName + '.sys.columns c on c.column_id = sc.column_id  and c.object_id = sc.object_id 
+	join ' + @DatabaseName + '.sys.tables t on c.object_id = t.object_id
+	join ' + @DatabaseName + '.sys.schemas sch on t.schema_id = sch.schema_id
+	where user_created = 1 order by s.name, sc.stats_column_id'
+
+	EXEC(@SqlQuery)
+
+	DELETE FROM DatabasesToProcess WHERE databasename = @DatabaseName
+END
+GO
+
+select * from ScriptOutput order by databasename asc, objecttype asc, objectname asc 
+
+USE master;
+IF EXISTS(SELECT * FROM sys.databases WHERE name like 'APSMigration')
+	DROP DATABASE APSMigration;
