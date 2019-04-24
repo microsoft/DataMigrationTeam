@@ -3,9 +3,9 @@
 #
 # Author:   Mitch van Huuksloot, Data Migration Jumpstart Engineering Team, Microsoft Corporation
 #
-# Date:     April 9, 2019
+# Date:     April 23, 2019
 #
-# Version:  1.9
+# Version:  1.91
 #
 # Purpose:  Use this script for a typical move from on premises SQL Server to an Azure PaaS SQL Service. 
 #           This script connects to a source SQL Server to capture logins, server roles, database users, database roles, role membership and selected object level permissions.
@@ -325,7 +325,7 @@ while ($rdr.Read())
                 {
                     $DropDBUsers += ,($database, ("DROP USER [$dbusername]"))
                 }
-                $CreateDBUsers += ,($database, ("CREATE USER [$upn] FOR LOGON [$upn] WITH DEFAULT_SCHEMA=[$schema], DEFAULT_LANGUAGE=[$defaultlang]"))
+                $CreateDBUsers += ,($database, ("CREATE USER [$upn] FOR LOGIN [$upn] WITH DEFAULT_SCHEMA=[$schema]"))
             }
             else # in Azure SQL DB/DW you can have SQL logins in master and linked users in the database, you with AAD accounts you can only create users at the database level (you can create an AAD user in master, but can't link it)
             {
