@@ -5,7 +5,7 @@
 #
 # Date:     April 23, 2019
 #
-# Version:  1.91
+# Version:  1.92
 #
 # Purpose:  Use this script for a typical move from on premises SQL Server to an Azure PaaS SQL Service. 
 #           This script connects to a source SQL Server to capture logins, server roles, database users, database roles, role membership and selected object level permissions.
@@ -32,12 +32,13 @@ $SrcConStr = "Server=localhost;Database=master;Integrated Security=True;Connect 
 $TargConStr = "Server=servername.database.windows.net;Database={0};User Id={userid};Password={password};Connect Timeout=120"
 $TargDatabase = "WideWorldImporters"
 $Domain = "@microsoft.com"
-$UseADLookup = 0      # do AD lookups to find actual email address, otherwise the script assumes the Windows IDs are DOMAIN\userid, which translate into userid@<$Domain> 
+$UseADLookup = 1      # do AD lookups to find actual email address, otherwise the script assumes the Windows IDs are DOMAIN\userid, which translate into userid@<$Domain> 
 $DoSQLLogins = 1      # process SQL logins/users or only Windows logins/users
 $QueryTimeout = 120
 
 # SQL Queries
-$VersionQuery = "select SERVERPROPERTY('EngineEdition')"
+$ProdVersionQry = "select SERVERPROPERTY('ProductMajorVersion')"
+$EngVersionQuy = "select SERVERPROPERTY('EngineEdition')"
 $DBsQuery = "select [name] from sys.databases where [name] not in ('master','msdb', 'model', 'tempdb')"
 $PrincipalQuery = "select p.[name], p.[type], p.default_database_name, p.default_language_name, p.sid, ISNULL(password_hash, 0) " +
                   "from sys.server_principals p left outer join sys.sql_logins l on (p.sid=l.sid) where p.[type] in ('S','U','G') "+
@@ -72,6 +73,11 @@ $conn = New-Object System.Data.SqlClient.SQLConnection
 $conn.ConnectionString = $SrcConStr
 $conn.Open()
 
+# Get Product version from Source
+$cmd = New-Object System.Data.SqlClient.SqlCommand($ProdVersionQry,$conn)
+$cmd.CommandTimeout = $QueryTimeout
+$ProdVersion = $cmd.ExecuteScalar()
+
 # Get database list from source
 $srcdbs = @()
 $cmd = New-Object System.Data.SqlClient.SqlCommand($DBsQuery,$conn)
@@ -87,7 +93,7 @@ $rdr.Close()
 $dconn = New-Object System.Data.SqlClient.SQLConnection
 $dconn.ConnectionString=($TargConStr -f $TargDatabase)
 $dconn.Open()
-$dcmd = New-Object System.Data.SqlClient.SqlCommand($VersionQuery,$dconn)
+$dcmd = New-Object System.Data.SqlClient.SqlCommand($EngVersionQry,$dconn)
 $dcmd.CommandTimeout = $QueryTimeout
 $destversion = $dcmd.ExecuteScalar()
 
@@ -392,73 +398,76 @@ $rdr.Close()
 # Get custom Server roles
 $ServerRoles = @()
 $SrvRolePerms = @()
-$cmd.CommandText = $SrvRolesQry
-$rdr = $cmd.ExecuteReader()
-while ($rdr.Read())
+if ($ProdVersion -gt 10)  # SQL 2008 and SQL 2008 R2 did not have create server role support - so following query will fail
 {
-    $user = $rdr.GetString(1)
-    if ($rdr.GetString(2) -ne 'S')  # for windows AD users or groups, do the AAD substitution
+    $cmd.CommandText = $SrvRolesQry
+    $rdr = $cmd.ExecuteReader()
+    while ($rdr.Read())
     {
-        foreach($usr in $UserMap)
+        $user = $rdr.GetString(1)
+        if ($rdr.GetString(2) -ne 'S')  # for windows AD users or groups, do the AAD substitution
         {
-            if ($usr[0] -eq $user)
+            foreach($usr in $UserMap)
             {
-                $user = $usr[1]
-                Break
+                if ($usr[0] -eq $user)
+                {
+                    $user = $usr[1]
+                    Break
+                }
             }
         }
-    }
-    if ($destversion -eq $SQLMI)
-    {
-        $dcmd.CommandText = $DestSrvRoleQry + $rdr.GetString(0) + "'"
-        $exists = $dcmd.ExecuteScalar()
-        if ($exists -gt 0)
+        if ($destversion -eq $SQLMI)
         {
-            $comment = " -- commented out because server role already exists on the target"
-            $ServerRoles += ("-- CREATE SERVER ROLE [" + $rdr.GetString(0) + "] AUTHORIZATION [$user] $comment")
+            $dcmd.CommandText = $DestSrvRoleQry + $rdr.GetString(0) + "'"
+            $exists = $dcmd.ExecuteScalar()
+            if ($exists -gt 0)
+            {
+                $comment = " -- commented out because server role already exists on the target"
+                $ServerRoles += ("-- CREATE SERVER ROLE [" + $rdr.GetString(0) + "] AUTHORIZATION [$user] $comment")
+            }
+            else
+            {
+                $comment = " -- this statement needs to be reviewed, since this permission may not be available on the target platform"
+                $ServerRoles += ("CREATE SERVER ROLE [" + $rdr.GetString(0) + "] AUTHORIZATION [$user]")        
+            }
         }
         else
         {
-            $comment = " -- this statement needs to be reviewed, since this permission may not be available on the target platform"
-            $ServerRoles += ("CREATE SERVER ROLE [" + $rdr.GetString(0) + "] AUTHORIZATION [$user]")        
+            $exists = 1
+            $comment = " -- commented out because server roles are not supported on the target"
+            $ServerRoles += ("-- CREATE SERVER ROLE [" + $rdr.GetString(0) + "] AUTHORIZATION [$user] $comment")
         }
-    }
-    else
-    {
-        $exists = 1
-        $comment = " -- commented out because server roles are not supported on the target"
-        $ServerRoles += ("-- CREATE SERVER ROLE [" + $rdr.GetString(0) + "] AUTHORIZATION [$user] $comment")
-    }
-    $cmd2.CommandText = $SrvRolePermQry + $rdr.GetString(0) + "'"
-    $rdr2 = $cmd2.ExecuteReader()
-    while ($rdr2.Read())
-    {
-        $prefix = ""
-        if ($exists -gt 0)
+        $cmd2.CommandText = $SrvRolePermQry + $rdr.GetString(0) + "'"
+        $rdr2 = $cmd2.ExecuteReader()
+        while ($rdr2.Read())
         {
-            $prefix = "-- "
+            $prefix = ""
+            if ($exists -gt 0)
+            {
+                $prefix = "-- "
+            }
+            $SrvRolePerms += ($prefix + $rdr2.GetString(0) + " " + $rdr2.GetString(1) + " TO [$user] $comment") 
         }
-        $SrvRolePerms += ($prefix + $rdr2.GetString(0) + " " + $rdr2.GetString(1) + " TO [$user] $comment") 
+        $rdr2.Close()
     }
-    $rdr2.Close()
-}
-$rdr.Close()
+    $rdr.Close()
 
-# Process nested Custom Server Roles
-$cmd.CommandText = $NestedSrvRoleQry
-$rdr = $cmd.ExecuteReader()
-while ($rdr.Read())
-{
-    if ($destversion -eq $SQLMI)
+    # Process nested Custom Server Roles
+    $cmd.CommandText = $NestedSrvRoleQry
+    $rdr = $cmd.ExecuteReader()
+    while ($rdr.Read())
     {
-        $ServerRoleMembers += "ALTER SERVER ROLE [" + $rdr.GetString(0) + "] ADD MEMBER [" + $rdr.GetString(1) + "]"
+        if ($destversion -eq $SQLMI)
+        {
+            $ServerRoleMembers += "ALTER SERVER ROLE [" + $rdr.GetString(0) + "] ADD MEMBER [" + $rdr.GetString(1) + "]"
+        }
+        else
+        {
+            $ServerRoleMembers += "-- ALTER SERVER ROLE [" + $rdr.GetString(0) + "] ADD MEMBER [" + $rdr.GetString(1) + "] -- commented out because server roles are not supported on the target"
+        }
     }
-    else
-    {
-        $ServerRoleMembers += "-- ALTER SERVER ROLE [" + $rdr.GetString(0) + "] ADD MEMBER [" + $rdr.GetString(1) + "] -- commented out because server roles are not supported on the target"
-    }
+    $rdr.Close()
 }
-$rdr.Close()
 
 # Get custom Database roles for each database and build create role and permission statements
 $DatabaseRoles = @(@())
