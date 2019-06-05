@@ -5,7 +5,7 @@
 #
 # Date:     April 23, 2019
 #
-# Version:  1.92
+# Version:  1.92.0
 #
 # Purpose:  Use this script for a typical move from on premises SQL Server to an Azure PaaS SQL Service. 
 #           This script connects to a source SQL Server to capture logins, server roles, database users, database roles, role membership and selected object level permissions.
