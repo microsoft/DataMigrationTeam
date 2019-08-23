@@ -1,9 +1,9 @@
 #!/bin/bash
-# $Id: installora2pg.sh 189 2019-08-23 02:06:12Z bpahlawa $
+# $Id: installora2pg.sh 192 2019-08-23 22:39:16Z bpahlawa $
 # Created 20-AUG-2019
 # $Author: bpahlawa $
-# $Date: 2019-08-23 12:06:12 +1000 (Fri, 23 Aug 2019) $
-# $Revision: 189 $
+# $Date: 2019-08-24 08:39:16 +1000 (Sat, 24 Aug 2019) $
+# $Revision: 192 $
 
 
 ORA2PG_GIT="https://github.com/darold/ora2pg.git"
@@ -29,15 +29,13 @@ exitshell()
 yum_install()
 {
    echo -e "${BLUEFONT}Checking $1 command....."
-   [[ $(yum list installed | grep "^${1}" | wc -l) -eq 0 ]] && echo -e "${YELLOWFONT}installing ${1}...." && yum -y install "${1}" && [[ $? -ne 0 ]] && exit 1
+   [[ $(yum list installed | grep "^${1}" | wc -l) -eq 0 ]] && echo -e "${YELLOWFONT}installing ${1}....${NORMALFONT}" && yum -y install "${1}" && [[ $? -ne 0 ]] && exit 1
    echo -e "${GREENFONT}$1 command is available......"
 }
 
 
 check_internet_conn()
 {
-   yum update all
-   yum_install which
    echo -e "${BLUEFONT}Checking ping command....."
    which ping 2>&1>/dev/null
    [[ $? -ne 0 ]] && echo -e "${REDFONT}Unable to find command ping${NORMALFONT}" && exit 1
@@ -45,7 +43,9 @@ check_internet_conn()
    echo -e "${BLUEFONT}Checking internet connection in progress....."
    ping -w2 -c2 www.google.com 2>&1>/dev/null
    [[ $? -ne 0 ]] && echo -e "${REDFONT}Unable to connect to the internet!!, please chreck your connection${NORMALFONT}" && exit 1
-   echo -e "${GREENFONT}Internet connection is available"
+   echo -e "${GREENFONT}Internet connection is available${NORMALFONT}"
+   yum update all
+   yum_install which
    yum_install wget
    yum_install curl
    yum_install git
@@ -62,10 +62,10 @@ check_internet_conn()
 
 install_dbd_postgres()
 {
-   echo -e "${BLUEFONT}Finding pg_config, if it has multiple pg_config, then only the last one will be taken"
-   PGCONFIG=`find / -name "pg_config" | tail -1` 
+   echo -e "${BLUEFONT}Finding pg_config, if it has multiple pg_config then latest version will be used"
+   PGCONFIGS=`find / -name "pg_config"`
 
-   if [ "$PGCONFIG" = "" ]
+   if [ "$PGCONFIGS" = "" ]
    then
       echo -e "${REDFONT}Postgres client or server is not installed..."
       echo -e "${BLUEFONT}if you want to install postgresql library for ora2pg then press ctrl+C to cancel this instllation"
@@ -76,11 +76,32 @@ install_dbd_postgres()
       echo -e "${BLUEFONT}Installing ora2pg without Postgresql Library........"
       return 0
    fi
+
+   VER=0
+   for PGCFG in $PGCONFIGS
+   do
+      echo -e "${BLUEFONT}Running $PGCFG to get the PostgreSQL version..."
+      if [ $VER -lt `$PGCFG | grep VERSION | sed "s/\(.* \)\([0-9]\+\).*$/\2/g"` ]
+      then  
+         VER=`$PGCFG | grep VERSION | sed "s/\(.* \)\([0-9]\+\).*$/\2/g"` 
+         PGCONFIG="$PGCFG"
+      fi
+   done
+   echo -e "${GREENFONT}The latest PostgreSQL Version is $VER"
       
    export POSTGRES_HOME=${PGCONFIG%/*/*}
    echo -e "${BLUEFONT}Checking DBD-Pg latest version...."
    DBDFILE=`curl -S ${DBD_ORACLE}/ | grep "DBD-Pg-.*tar.gz" | tail -1 | sed -n 's/\(.*="\)\(DBD.*gz\)\(".*\)/\2/p'`
    [[ ! -f ${DBDFILE} ]] && echo -e "${YELLOWFONT}Downloading DBD-Pg latest version...." && wget ${DBD_ORACLE}/${DBDFILE}
+   echo -e "${BLUEFONT}Checking postgres development...."
+   PGLIBS=`yum list installed | grep "postgresql.*libs" | tail -1 | awk '{print $1}'`
+   if [ "$PGLIBS" = "" ]
+   then
+      echo -e "${REDFONT}PostgreSQL Libs doesnt exists......Skipping postgresql library installation..${NORMALFONT}"
+      return 0
+   else
+      yum_install $(echo $PGLIBS | sed 's/libs/devel/g')
+   fi
    echo -e "${GREENFONT}Extracting $DBDFILE${NORMALFONT}"
    tar xvfz ${DBDFILE}
    cd ${DBDFILE%.*.*}
@@ -139,7 +160,7 @@ install_ora2pg()
       make install
       [[ $? -ne 0 ]] && echo -e "${REDFONT}Error in compiling ora2pg...${NORMALFONT}" && exit 1
    fi
-   echo -e "\n${GREENFONT}ora2pg compiled successfully\n"
+   echo -e "\n${GREENFONT}ora2pg has been compiled successfully\n"
    cd ..
    [[ -d ora2pg ]] && echo -e "${YELLOWFONT}Removing ora2pg source directory" && rm -rf ora2pg
    [[ -d "${DBDSOURCE}" ]] && echo -e "${YELLOWFONT}Removing ${DBDSOURCE} source directory and gz file${NORMALFONT}" && rm -rf "${DBDSOURCE}"*
@@ -150,16 +171,24 @@ install_ora2pg()
 
 checking_ora2pg()
 {
-   echo -e "${BLUEFONT}Checking whether ora2pg can be run successfully!!"
-   echo -e "Running ora2pg without parameter........."
+   echo -e "\n${BLUEFONT}Checking whether ora2pg can be run successfully!!"
+   echo -e "Running ora2pg without parameter.........\n"
+   echo -e "${YELLOWFONT}This ora2pg will depend on the following ORACLE_HOME directory:${GREENFONT} $ORACLE_HOME"
+   if [ "$POSTGRES_HOME" != "" ] 
+   then
+      echo -e "${YELLOWFONT}This ora2pg will depend on the following POSTGRES_HOME directory:${GREENFONT} $POSTGRES_HOME\n"
+   else
+      echo -e "${BLUEFONT}This ora2pg is not linked to POSTGRES_HOME due to the unavailability of postgresql client/server package"
+      echo -e "${BLUEFONT}You can install postgresql client/server package and re-run this installation at anytime...\n"
+   fi
    RESULT=`ora2pg 2>&1`
    if [ $? -ne 0 ]
    then
       if [[ $RESULT =~ ORA- ]]
       then
-          echo -e "${GREENFONT}ora2pg can be run successfully, however it could have the following issues:"
+          echo -e "${GREENFONT}ora2pg can be run successfully, however the ${REDFONT}ORA- error ${GREENFONT}could be related to the following issues:"
           echo -e "ora2pg.conf has wrong entry, listener is not up or database is down!!"          
-          echo -e "This installation is considered to be successfull...${NORMALFONT}"
+          echo -e "This installation is considered to be successfull...${NORMALFONT}\n"
           exit 0
       fi
       if [[ $RESULT =~ .*find.*configuration.*file ]]
@@ -178,9 +207,9 @@ checking_ora2pg()
       then
           if [[ $RESULT =~ ORA- ]]
           then
-              echo -e "${GREENFONT}ora2pg can be run successfully, however it could have the following issues:"
+              echo -e "${GREENFONT}ora2pg can be run successfully, however ${REDFONT}the ORA- error ${GREENFONT}could be related to the following issues:"
               echo -e "ora2pg.conf has wrong entry, listener is not up or database is down!!"          
-              echo -e "This installation is considered to be successfull...${NORMALFONT}"
+              echo -e "This installation is considered to be successfull...${NORMALFONT}\n"
               exit 0
           else
               echo -e "${REDFONT}The issues are not resolved, please check logfile....!!${NORMALFONT}"
@@ -239,4 +268,3 @@ install_oracle_instantclient()
    install_dbd_postgres
    install_ora2pg
    checking_ora2pg
-
