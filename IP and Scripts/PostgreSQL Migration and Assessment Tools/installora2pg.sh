@@ -1,9 +1,9 @@
 #!/bin/bash
-# $Id: installora2pg.sh 192 2019-08-23 22:39:16Z bpahlawa $
+# $Id: installora2pg.sh 194 2019-08-24 12:53:07Z bpahlawa $
 # Created 20-AUG-2019
 # $Author: bpahlawa $
-# $Date: 2019-08-24 08:39:16 +1000 (Sat, 24 Aug 2019) $
-# $Revision: 192 $
+# $Date: 2019-08-24 22:53:07 +1000 (Sat, 24 Aug 2019) $
+# $Revision: 194 $
 
 
 ORA2PG_GIT="https://github.com/darold/ora2pg.git"
@@ -36,16 +36,16 @@ yum_install()
 
 check_internet_conn()
 {
+   yum update all
+   yum_install which
    echo -e "${BLUEFONT}Checking ping command....."
    which ping 2>&1>/dev/null
-   [[ $? -ne 0 ]] && echo -e "${REDFONT}Unable to find command ping${NORMALFONT}" && exit 1
+   [[ $? -ne 0 ]] && yum_install iputils
    echo -e "${GREENFONT}ping command is available....."
    echo -e "${BLUEFONT}Checking internet connection in progress....."
    ping -w2 -c2 www.google.com 2>&1>/dev/null
    [[ $? -ne 0 ]] && echo -e "${REDFONT}Unable to connect to the internet!!, please chreck your connection${NORMALFONT}" && exit 1
    echo -e "${GREENFONT}Internet connection is available${NORMALFONT}"
-   yum update all
-   yum_install which
    yum_install wget
    yum_install curl
    yum_install git
@@ -68,7 +68,7 @@ install_dbd_postgres()
    if [ "$PGCONFIGS" = "" ]
    then
       echo -e "${REDFONT}Postgres client or server is not installed..."
-      echo -e "${BLUEFONT}if you want to install postgresql library for ora2pg then press ctrl+C to cancel this instllation"
+      echo -e "${BLUEFONT}if you want to install postgresql library for ora2pg then press ctrl+C to cancel this installation"
       echo -e "after that, Install postgresql client then re-run this installation!\n"
       echo -e "${YELLOWFONT}However, the ora2pg will be installed without postgresql library"
       echo -e "${GREENFONT}Sleeping for 5 seconds waiting for you to decide...\n\n"
@@ -268,3 +268,4 @@ install_oracle_instantclient()
    install_dbd_postgres
    install_ora2pg
    checking_ora2pg
+
