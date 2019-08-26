@@ -1,9 +1,9 @@
 #!/bin/bash
-# $Id: installora2pg.sh 194 2019-08-24 12:53:07Z bpahlawa $
+# $Id: installora2pg.sh 195 2019-08-26 00:35:40Z bpahlawa $
 # Created 20-AUG-2019
 # $Author: bpahlawa $
-# $Date: 2019-08-24 22:53:07 +1000 (Sat, 24 Aug 2019) $
-# $Revision: 194 $
+# $Date: 2019-08-26 10:35:40 +1000 (Mon, 26 Aug 2019) $
+# $Revision: 195 $
 
 
 ORA2PG_GIT="https://github.com/darold/ora2pg.git"
@@ -181,7 +181,9 @@ checking_ora2pg()
       echo -e "${BLUEFONT}This ora2pg is not linked to POSTGRES_HOME due to the unavailability of postgresql client/server package"
       echo -e "${BLUEFONT}You can install postgresql client/server package and re-run this installation at anytime...\n"
    fi
-   RESULT=`ora2pg 2>&1`
+   export PATH=/usr/local/bin:$PATH
+   ORA2PGBIN=`which ora2pg`
+   RESULT=`$ORA2PGBIN 2>&1`
    if [ $? -ne 0 ]
    then
       if [[ $RESULT =~ ORA- ]]
@@ -202,7 +204,7 @@ checking_ora2pg()
       echo -e "${BLUEFONT}Enforcing LD_LIBRARY_PATH to $ORACLE_HOME/lib"
       export LD_LIBRARY_PATH=$ORACLE_HOME/lib
       echo -e "${YELLOWFONT}Re-running ora2pg......"
-      RESULT=`ora2pg 2>&1`
+      RESULT=`$ORA2PGBIN 2>&1`
       if [ $? -ne 0 ]
       then
           if [[ $RESULT =~ ORA- ]]
@@ -249,6 +251,8 @@ install_oracle_instantclient()
       export ORACLE_HOME="${LIBFILE%/*}"
    fi
 }
+
+   [[ $(whoami) != "root" ]] && echo -e "${REDFONT}This script must be run as root or with sudo...${NORMALFONT}" && exit 1
    check_internet_conn
    echo -e "${BLUEFONT}Checking oracle installation locally....."
    LIBFILE=`find / -name "libclntsh.so*" | grep -Ev "stage|inventory" | tail -1 2>/dev/null`
