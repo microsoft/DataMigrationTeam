@@ -1,0 +1,5 @@
+config.ini: Parameters referrig to source and target (Oracle and PostgreSQL)
+installora2pg.sh: Installs drivers for Oracle, PostgreSQL and Ora2PG binary.
+expimppostgres.py: Exports Data From Oracle into flat files, gzipped
+comparedb.sh: Schema Compare Oracle and PostgreSQL
+
