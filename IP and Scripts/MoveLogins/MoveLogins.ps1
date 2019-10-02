@@ -3,9 +3,9 @@
 #
 # Author:   Mitch van Huuksloot, Data Migration Jumpstart Engineering Team, Microsoft Corporation
 #
-# Date:     April 23, 2019
+# Date:     July 17, 2019
 #
-# Version:  1.92.0
+# Version:  1.94
 #
 # Purpose:  Use this script for a typical move from on premises SQL Server to an Azure PaaS SQL Service. 
 #           This script connects to a source SQL Server to capture logins, server roles, database users, database roles, role membership and selected object level permissions.
@@ -16,15 +16,15 @@
 #           PLEASE REVIEW THE GENERATED SCRIPT CAREFULLY BEFORE APPLYING IT TO A PRODUCTION SYSTEM
 #
 # Notes and Limitations:
-#           Complicated permissions hierarchies are not supported - we suggest you look at DMA
+#           Complicated permissions hierarchies are not supported - we suggest you look at permissions support in DMA
 #           GRANTS WITH GRANT OPTION are not supported and many other nested permissions are not supported by this script.
 #           Application Roles are not scripted.
 #           Contained databases are not supported by this script. 
-#           If you are going to use the AD lookup feature, you will need the Remote Server Administrator Tool enabled or installed - see https://www.microsoft.com/en-us/download/details.aspx?id=45520 for Windows 10
+#           If you are going to use the AD lookup feature, you will need the Remote Server Administrator Tool installed - see https://www.microsoft.com/en-us/download/details.aspx?id=45520 for Windows 10
 #
 # Warranty: This script is provided on as "AS IS" basis and there are no warranties, express or implied, including, but not limited to implied warranties of merchantability or fitness for a particular purpose. USE AT YOUR OWN RISK. 
 #
-# Feedback: Please provide comments and feedback to the author at mitch.van.huuksloot@microsoft.com
+# Feedback: Please provide comments and feedback to the author at mitch.van.huuksloot at microsoft.com
 #
 
 # Variables that the User needs to set
@@ -37,8 +37,8 @@ $DoSQLLogins = 1      # process SQL logins/users or only Windows logins/users
 $QueryTimeout = 120
 
 # SQL Queries
-$ProdVersionQry = "select SERVERPROPERTY('ProductMajorVersion')"
-$EngVersionQuy = "select SERVERPROPERTY('EngineEdition')"
+$ProdVersionQry = "select left(cast(serverproperty('ProductVersion') as varchar(25)), 2)"
+$EngVersionQry = "select SERVERPROPERTY('EngineEdition')"
 $DBsQuery = "select [name] from sys.databases where [name] not in ('master','msdb', 'model', 'tempdb')"
 $PrincipalQuery = "select p.[name], p.[type], p.default_database_name, p.default_language_name, p.sid, ISNULL(password_hash, 0) " +
                   "from sys.server_principals p left outer join sys.sql_logins l on (p.sid=l.sid) where p.[type] in ('S','U','G') "+
@@ -62,6 +62,10 @@ $DBUserRoleQry = "select r.[name] from {0}.sys.database_role_members m join {0}.
 $PermQuery = "select p.class_desc, case when class = 3 then s2.[name] else '['+s.[name]+'].['+o.[name]+']' end, case when class = 1 and p.minor_id <> 0 then c.name else ' ' end, p.permission_name, p.state_desc " +
              "from {0}.sys.database_permissions p join {0}.sys.database_principals dp on (p.grantee_principal_id = dp.principal_id) left join {0}.sys.objects o on (p.major_id=o.object_id) left join {0}.sys.schemas s on (o.schema_id=s.schema_id) "+
              "left join {0}.sys.schemas s2 on (p.major_id=s2.schema_id) left join {0}.sys.columns c on (p.major_id=c.object_id and p.minor_id=c.column_id) where class in (1, 3) and dp.[name]='"
+$ObjOwnQry = "select s.name + '.' + o.name from sys.objects o join sys.schemas s on (o.schema_id=s.schema_id) left join sys.database_principals p on (o.principal_id=p.principal_id) where p.name='{0}' order by s.name, o.name"
+$SchemaOwnQry = "select s.name from sys.schemas s left join sys.database_principals p on (s.principal_id=p.principal_id) where p.name='{0}' order by s.name"
+$TypeOwnQry = "select t.name from sys.types t join sys.database_principals p on (t.principal_id=p.principal_id) where p.name='{0}' order by t.name"
+$RoleOwnQry = "select p.name from sys.database_principals p join sys.database_principals o on (p.owning_principal_id=o.principal_id) where p.type='R' and p.name='{0}' order by p.name"
 
 # SQL Engine Editions
 $SQLDB = 5
@@ -157,6 +161,7 @@ $DropDBUsers = @(@())
 $CreateDBUsers = @(@())
 $DBRoleMember = @(@())
 $ObjectPerms = @(@())
+$ChgOwner = @(@())
 
 # Main Loop - for each login (Principal) in the source SQL Server... (not including Roles and built in logins)
 $cmd.CommandText = $PrincipalQuery
@@ -228,7 +233,7 @@ while ($rdr.Read())
                 $upn = $identity[1] + $Domain
             }                
         }
-        if ($upn -eq "")
+        if ($upn -eq "" -or $upn -eq $null -or -not $upn -is [string])
         {
             $upn = $identity[1]  # security group without an email?
             "-- Warning: $name failed on Windows AD lookup - assuming that this is a security group ($upn) without an email address, but please review carefully"
@@ -318,12 +323,21 @@ while ($rdr.Read())
             else
             {
                 $rdrschema.Close()
-                Break   # not a user in this database
+                Continue   # not a user in this database
             }
 
-            $dcmd.CommandText = ($DestUserQry -f $database) + $upn + "'"
-            $exists = $dcmd.ExecuteScalar()
-            
+            # special handling for account mapped to dbo - change owner to sa
+            if ($dbusername -eq "dbo") 
+            {
+                $ChgOwner += ,($database, ("ALTER AUTHORIZATION ON DATABASE::[$database] TO sa  -- change ownership from [$name] to sa"))
+                $exists = 0
+            }
+            else
+            {
+                $dcmd.CommandText = ($DestUserQry -f $database) + $dbusername + "'"
+                $exists = $dcmd.ExecuteScalar()
+            }
+
             # For MI target - we create a login at the server level (above) and a user in each target database
             if ($destversion -eq $SQLMI)
             {
@@ -356,13 +370,20 @@ while ($rdr.Read())
                 }
             }
 
-            # Process Database Roles for this database user
+            # Process Database Roles for this user
             $dbq = $DBUserRoleQry -f $database
             $cmd2.CommandText = $dbq + $name + "'"
             $rdrrole = $cmd2.ExecuteReader()
             while ($rdrrole.Read())
             {
-                $DBRoleMember += ,($database, ("exec sp_addrolemember '" + $rdrrole.GetString(0) + "', [$upn]"))
+                if ($destversion -eq $SQLDW)
+                {
+                    $DBRoleMember += ,($database, ("exec sp_addrolemember '" + $rdrrole.GetString(0) + "', [$upn]"))
+                }
+                else
+                {
+                    $DBRoleMember += ,($database, ("ALTER ROLE [" + $rdrrole.GetString(0) + "] ADD MEMBER [$upn]"))
+                }
             }
             $rdrrole.Close()
 
@@ -390,6 +411,45 @@ while ($rdr.Read())
                 }
             }
             $rdrperm.Close()
+
+            if ($dbusername -ne "dbo")  # don't try to modify dbo ownership
+            {
+                # Look for objects (tables, views, stored procs, functions etc.) owned by the old user on the target and script an alter to dbo ownership
+                $dcmd.CommandText = ($ObjOwnQry -f $dbusername)
+                $rdrown = $dcmd.ExecuteReader()
+                while ($rdrown.Read())
+                {
+                    $ChgOwner += ,($database, ("ALTER AUTHORIZATION ON OBJECT::[" + $rdrown.GetString(0) + "] TO dbo  -- change ownership from [$dbusername] to dbo"))
+                }
+                $rdrown.Close()
+            
+                # Look for schemas owned by the old user on the target
+                $dcmd.CommandText = ($SchemaOwnQry -f $dbusername)
+                $rdrown = $dcmd.ExecuteReader()
+                while ($rdrown.Read())
+                {
+                    $ChgOwner += ,($database, ("ALTER AUTHORIZATION ON SCHEMA::[" + $rdrown.GetString(0) + "] TO dbo  -- change ownership from [$dbusername] to dbo"))
+                }
+                $rdrown.Close()
+
+                # Look for types owned by the old user on the target
+                $dcmd.CommandText = ($TypeOwnQry -f $dbusername)
+                $rdrown = $dcmd.ExecuteReader()
+                while ($rdrown.Read())
+                {
+                    $ChgOwner += ,($database, ("ALTER AUTHORIZATION ON TYPE::[" + $rdrown.GetString(0) + "] TO dbo  -- change ownership from [$dbusername] to dbo"))
+                }
+                $rdrown.Close()
+
+                # Look for roles owned by the old user on the target
+                $dcmd.CommandText = ($RoleOwnQry -f $dbusername)
+                $rdrown = $dcmd.ExecuteReader()
+                while ($rdrown.Read())
+                {
+                    $ChgOwner += ,($database, ("ALTER AUTHORIZATION ON ROLE::[" + $rdrown.GetString(0) + "] TO dbo  -- change ownership from [$dbusername] to dbo"))
+                }
+                $rdrown.Close()
+            }
         }
     }
 }
@@ -534,7 +594,14 @@ foreach ($db in $Databases)
     $rdr = $cmd.ExecuteReader()
     while ($rdr.Read())
     {
-        $DBRoleMember += ,($db, ("exec sp_addrolemember '" + $rdr.GetString(0) + "', '" + $rdr.GetString(1) + "'"))   
+        if ($destversion -eq $SQLDW)
+        {
+            $DBRoleMember += ,($db, ("exec sp_addrolemember '" + $rdr.GetString(0) + "', '" + $rdr.GetString(1) + "'"))
+        }
+        else
+        {
+            $DBRoleMember += ,($db, ("ALTER ROLE [" + $rdr.GetString(0) + "] ADD MEMBER [" + $rdr.GetString(1) + "]"))
+        } 
     }
     $rdr.Close()
 }
@@ -570,6 +637,15 @@ foreach ($database in $Databases)
     if ($destversion -eq $SQLMI)
     {
         "USE " + $database
+    }
+
+    # change any required ownerships before drop
+    foreach ($chg in $ChgOwner)
+    {
+        if ($chg[0] -eq $database)
+        {
+            $chg[1]
+        }
     }
 
     "-- Database Users"
