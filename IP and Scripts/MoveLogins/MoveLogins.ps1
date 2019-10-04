@@ -3,7 +3,7 @@
 #
 # Author:   Mitch van Huuksloot, Data Migration Jumpstart Engineering Team, Microsoft Corporation
 #
-# Date:     July 17, 2019
+# Date:     Oct 2, 2019
 #
 # Version:  1.94
 #
@@ -16,6 +16,7 @@
 #           PLEASE REVIEW THE GENERATED SCRIPT CAREFULLY BEFORE APPLYING IT TO A PRODUCTION SYSTEM
 #
 # Notes and Limitations:
+#           DMS now supports moving Logins - we recommend you use that if possible.
 #           Complicated permissions hierarchies are not supported - we suggest you look at permissions support in DMA
 #           GRANTS WITH GRANT OPTION are not supported and many other nested permissions are not supported by this script.
 #           Application Roles are not scripted.
