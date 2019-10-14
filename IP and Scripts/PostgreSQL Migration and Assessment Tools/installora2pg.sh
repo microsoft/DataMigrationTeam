@@ -1,9 +1,9 @@
 #!/bin/bash
-# $Id: installora2pg.sh 195 2019-08-26 00:35:40Z bpahlawa $
+# $Id: installora2pg.sh 198 2019-10-14 22:57:15Z bpahlawa $
 # Created 20-AUG-2019
 # $Author: bpahlawa $
-# $Date: 2019-08-26 10:35:40 +1000 (Mon, 26 Aug 2019) $
-# $Revision: 195 $
+# $Date: 2019-10-15 09:57:15 +1100 (Tue, 15 Oct 2019) $
+# $Revision: 198 $
 
 
 ORA2PG_GIT="https://github.com/darold/ora2pg.git"
@@ -16,7 +16,7 @@ REDFONT="\e[01;48;5;234;38;5;196m"
 GREENFONT="\e[01;38;5;46m"
 NORMALFONT="\e[0m"
 BLUEFONT="\e[01;38;5;14m"
-YELLOWFONT="\e[01;38;5;226m"
+YELLOWFONT="\e[0;34;2;10m"
 
 trap exitshell SIGINT SIGTERM
 
@@ -53,7 +53,7 @@ check_internet_conn()
    yum_install perl-DBI
    yum_install make
    yum_install gcc
-   curl -S --verbose --header 'Host:' $ORA2PG_GIT 2> $TMPFILE
+   curl -kS --verbose --header 'Host:' $ORA2PG_GIT 2> $TMPFILE
    export GITHOST=`cat $TMPFILE | sed -n -e "s/\(.*CN=\)\([a-z0-9A-Z\.]\+\)\(,.*\)/\2/p"`
    export GITIP=`ping -c1 -w1 github.com | sed -n -e "s/\(.*(\)\([0-9]\+\.[0-9]\+\.[0-9]\+\.[0-9]\+\)\().*\)/\2/p"`
    rm -f $TMPFILE
@@ -91,8 +91,8 @@ install_dbd_postgres()
       
    export POSTGRES_HOME=${PGCONFIG%/*/*}
    echo -e "${BLUEFONT}Checking DBD-Pg latest version...."
-   DBDFILE=`curl -S ${DBD_ORACLE}/ | grep "DBD-Pg-.*tar.gz" | tail -1 | sed -n 's/\(.*="\)\(DBD.*gz\)\(".*\)/\2/p'`
-   [[ ! -f ${DBDFILE} ]] && echo -e "${YELLOWFONT}Downloading DBD-Pg latest version...." && wget ${DBD_ORACLE}/${DBDFILE}
+   DBDFILE=`curl -kS "${DBD_ORACLE}/" | grep "DBD-Pg-.*tar.gz" | tail -1 | sed -n 's/\(.*="\)\(DBD.*gz\)\(".*\)/\2/p'`
+   [[ ! -f ${DBDFILE} ]] && echo -e "${YELLOWFONT}Downloading DBD-Pg latest version...." && wget --no-check-certificate ${DBD_ORACLE}/${DBDFILE}
    echo -e "${BLUEFONT}Checking postgres development...."
    PGLIBS=`yum list installed | grep "postgresql.*libs" | tail -1 | awk '{print $1}'`
    if [ "$PGLIBS" = "" ]
@@ -121,8 +121,8 @@ install_dbd_postgres()
 install_dbd_oracle()
 {
    echo -e "${BLUEFONT}Checking DBD-Oracle latest version...."
-   DBDFILE=`curl -S ${DBD_ORACLE}/ | grep "DBD-Oracle.*tar.gz" | tail -1 | sed -n 's/\(.*="\)\(DBD.*gz\)\(".*\)/\2/p'`
-   [[ ! -f ${DBDFILE} ]] && echo -e "${YELLOWFONT}Downloading DBD-Oracle latest version...." && wget ${DBD_ORACLE}/${DBDFILE}
+   DBDFILE=`curl -kS "${DBD_ORACLE}/" | grep "DBD-Oracle.*tar.gz" | tail -1 | sed -n 's/\(.*="\)\(DBD.*gz\)\(".*\)/\2/p'`
+   [[ ! -f ${DBDFILE} ]] && echo -e "${YELLOWFONT}Downloading DBD-Oracle latest version...." && wget --no-check-certificate ${DBD_ORACLE}/${DBDFILE}
    echo -e "${GREENFONT}Extracting $DBDFILE${NORMALFONT}"
    tar xvfz ${DBDFILE}
    cd ${DBDFILE%.*.*}
@@ -231,14 +231,26 @@ install_oracle_instantclient()
    INSTCLIENTFILE=`find . -name "*${INSTCLIENTKEYWORD}*linux*" -print -quit | grep -v sdk`
    if [[ "$INSTCLIENTFILE" = "" ]]
    then
-      echo -e "${REDFONT}Oracle instant client file doesnt exist.... please download from oracle website..${NORMALFONT}"
+      INSTCLIENTFILE=`find . -name "*${INSTCLIENTKEYWORD}*" -print -quit | grep -v sdk`
+      if [[ "$INSTCLIENTFILE" = "" ]]
+      then
+         echo -e "${REDFONT}Oracle instant client file doesnt exist.... please download from Oracle website..${NORMALFONT}"
+      else
+         echo -e "${REDFONT}Oracle instant client file $INSTCLIENTFILE has been found.... but it is not for linux, please download the correct file!..${NORMALFONT}"
+      fi
       exit 1
    else
       yum_install unzip
       INSTCLIENTSDKFILE=`find . -name "*${INSTCLIENTKEYWORD}*sdk*linux*" -print -quit`
       if [[ "$INSTCLIENTSDKFILE" = "" ]]
       then
-         echo -e "${REDFONT}Oracle instant client sdk file doesnt exist.... please download from oracle website..${NORMALFONT}"
+         INSTCLIENTSDKFILE=`find . -name "*${INSTCLIENTKEYWORD}*sdk*" -print -quit`
+         if [[ "$INSTCLIENTSDKFILE" = "" ]]
+         then
+             echo -e "${REDFONT}Oracle instant client sdk file doesnt exist.... please download from Oracle website..${NORMALFONT}"
+         else
+             echo -e "${REDFONT}Oracle instant client sdk file $INSTCLIENTSDKFILE has been found.... but not for linux, please download the correct file!....${NORMALFONT}"
+         fi
          exit 1
       else
          unzip -o $INSTCLIENTSDKFILE -d /usr/local
@@ -247,7 +259,7 @@ install_oracle_instantclient()
       unzip -o $INSTCLIENTFILE -d /usr/local
       [[ $? -ne 0 ]] && echo -e "${REDFONT}Unzipping file $INSTCLIENTFILE failed!!${NORMALFONT}" && exit 1
       echo -e "${GREENFONT}File $INSTCLIENTFILE has been unzipped successfully!!"
-      LIBFILE=`find /usr/local -name "libclntsh.so*" | grep -Ev "stage|inventory" | tail -1 2>/dev/null`
+      LIBFILE=`find /usr/local -name "libclntsh.so*" 2>/dev/null| grep -Ev "stage|inventory" | tail -1 2>/dev/null`
       export ORACLE_HOME="${LIBFILE%/*}"
    fi
 }
@@ -255,7 +267,7 @@ install_oracle_instantclient()
    [[ $(whoami) != "root" ]] && echo -e "${REDFONT}This script must be run as root or with sudo...${NORMALFONT}" && exit 1
    check_internet_conn
    echo -e "${BLUEFONT}Checking oracle installation locally....."
-   LIBFILE=`find / -name "libclntsh.so*" | grep -Ev "stage|inventory" | tail -1 2>/dev/null`
+   LIBFILE=`find / -name "libclntsh.so*" 2>/dev/null| grep -Ev "stage|inventory" | tail -1 2>/dev/null`
    if [ "$LIBFILE" = "" ]
    then
       echo -e "${BLUEFONT}oracle instantclient needs to be installed"
@@ -271,5 +283,4 @@ install_oracle_instantclient()
    install_dbd_oracle
    install_dbd_postgres
    install_ora2pg
-   checking_ora2pg
-
+checking_ora2pg
