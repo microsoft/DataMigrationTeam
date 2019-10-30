@@ -1,9 +1,9 @@
 #!/bin/bash
-# $Id: installora2pg.sh 198 2019-10-14 22:57:15Z bpahlawa $
+# $Id: installora2pg.sh 200 2019-10-28 14:49:34Z bpahlawa $
 # Created 20-AUG-2019
 # $Author: bpahlawa $
-# $Date: 2019-10-15 09:57:15 +1100 (Tue, 15 Oct 2019) $
-# $Revision: 198 $
+# $Date: 2019-10-29 01:49:34 +1100 (Tue, 29 Oct 2019) $
+# $Revision: 200 $
 
 
 ORA2PG_GIT="https://github.com/darold/ora2pg.git"
@@ -54,7 +54,7 @@ check_internet_conn()
    yum_install make
    yum_install gcc
    curl -kS --verbose --header 'Host:' $ORA2PG_GIT 2> $TMPFILE
-   export GITHOST=`cat $TMPFILE | sed -n -e "s/\(.*CN=\)\([a-z0-9A-Z\.]\+\)\(,.*\)/\2/p"`
+   export GITHOST=`cat $TMPFILE | sed -n -e "s/\(.*CN=\)\([a-z0-9A-Z\.]\+\)\(,.*\|$\)/\2/p"`
    export GITIP=`ping -c1 -w1 github.com | sed -n -e "s/\(.*(\)\([0-9]\+\.[0-9]\+\.[0-9]\+\.[0-9]\+\)\().*\)/\2/p"`
    rm -f $TMPFILE
 
