@@ -1,9 +1,9 @@
 #!/bin/bash
-# $Id: installora2pg.sh 200 2019-10-28 14:49:34Z bpahlawa $
+# $Id: installora2pg.sh 204 2019-11-02 06:21:04Z bpahlawa $
 # Created 20-AUG-2019
 # $Author: bpahlawa $
-# $Date: 2019-10-29 01:49:34 +1100 (Tue, 29 Oct 2019) $
-# $Revision: 200 $
+# $Date: 2019-11-02 17:21:04 +1100 (Sat, 02 Nov 2019) $
+# $Revision: 204 $
 
 
 ORA2PG_GIT="https://github.com/darold/ora2pg.git"
@@ -49,6 +49,7 @@ check_internet_conn()
    yum_install wget
    yum_install curl
    yum_install git
+   yum_install perl-open
    yum_install perl-ExtUtils-MakeMaker
    yum_install perl-DBI
    yum_install make
@@ -179,18 +180,44 @@ checking_ora2pg()
       echo -e "${YELLOWFONT}This ora2pg will depend on the following POSTGRES_HOME directory:${GREENFONT} $POSTGRES_HOME\n"
    else
       echo -e "${BLUEFONT}This ora2pg is not linked to POSTGRES_HOME due to the unavailability of postgresql client/server package"
-      echo -e "${BLUEFONT}You can install postgresql client/server package and re-run this installation at anytime...\n"
+      echo -e "${BLUEFONT}You can install postgresql client/server package using dnf or yum REDHAT tool, and re-run this installation at anytime...\n"
    fi
+   
+   if [ "$SUDO_USER" = "" ]
+   then
+      echo -e "${YELLOWFONT}\nYou are running this script as ${BLUEFONT}root"
+    
+      printf "Which Linux username who will run ora2pg tool? : $ERRCODE ";read THEUSER
+      [[ "$THEUSER" = "" ]] && THEUSER=empty
+      id $THEUSER 2>/dev/null
+      while [ $? -ne 0 ] 
+      do
+          ERRCODE="Sorry!!, User : $THEUSER doesnt exist!!.. try again.."
+          printf "Which user that will run this ora2pg tool? : $ERRCODE ";read THEUSER
+          [[ "$THEUSER" = "" ]] && THEUSER=empty
+          id $THEUSER 2>/dev/null
+      done
+      printf "User : $THEUSER is available....\n"
+      HOMEDIR=`su - $THEUSER -c "echo ~"`
+   else
+      echo -e "${YELLOWFONT}\nYou are running this script as ${BLUEFONT}$SUDO_USER"
+      echo -e "\nUser : $SUDO_USER is running this installation, now setting up necessary environment variable"
+      HOMEDIR=`su - $SUDO_USER -c "echo ~"`
+      THEUSER="$SUDO_USER"
+   fi
+   [[ -f $HOMEDIR/.bash_profile ]] && [[ `cat $HOMEDIR/.bash_profile | grep LD_LIBRARY_PATH | wc -l` -eq 0 ]] && echo "export LD_LIBRARY_PATH=$ORACLE_HOME/lib" >> $HOMEDIR/.bash_profile
+   
    export PATH=/usr/local/bin:$PATH
    ORA2PGBIN=`which ora2pg`
-   RESULT=`$ORA2PGBIN 2>&1`
+   RESULT=`su - $THEUSER -c "$ORA2PGBIN" 2>&1`
    if [ $? -ne 0 ]
    then
       if [[ $RESULT =~ ORA- ]]
       then
           echo -e "${GREENFONT}ora2pg can be run successfully, however the ${REDFONT}ORA- error ${GREENFONT}could be related to the following issues:"
-          echo -e "ora2pg.conf has wrong entry, listener is not up or database is down!!"          
+          echo -e "ora2pg.conf has wrong configuration, listener is not up or database is down!!"          
           echo -e "This installation is considered to be successfull...${NORMALFONT}\n"
+          echo -e "\nPlease logout from this user, then login as $THEUSER to run ora2pg...\n"
           exit 0
       fi
       if [[ $RESULT =~ .*find.*configuration.*file ]]
@@ -204,14 +231,15 @@ checking_ora2pg()
       echo -e "${BLUEFONT}Enforcing LD_LIBRARY_PATH to $ORACLE_HOME/lib"
       export LD_LIBRARY_PATH=$ORACLE_HOME/lib
       echo -e "${YELLOWFONT}Re-running ora2pg......"
-      RESULT=`$ORA2PGBIN 2>&1`
+      RESULT=`su - $THEUSER -c "$ORA2PGBIN" 2>&1`
       if [ $? -ne 0 ]
       then
           if [[ $RESULT =~ ORA- ]]
           then
               echo -e "${GREENFONT}ora2pg can be run successfully, however ${REDFONT}the ORA- error ${GREENFONT}could be related to the following issues:"
-              echo -e "ora2pg.conf has wrong entry, listener is not up or database is down!!"          
+              echo -e "ora2pg.conf has wrong configuration, listener is not up or database is down!!"          
               echo -e "This installation is considered to be successfull...${NORMALFONT}\n"
+              echo -e "\nPlease logout from this user, then login as $THEUSER to run ora2pg...\n"
               exit 0
           else
               echo -e "${REDFONT}The issues are not resolved, please check logfile....!!${NORMALFONT}"
@@ -234,7 +262,8 @@ install_oracle_instantclient()
       INSTCLIENTFILE=`find . -name "*${INSTCLIENTKEYWORD}*" -print -quit | grep -v sdk`
       if [[ "$INSTCLIENTFILE" = "" ]]
       then
-         echo -e "${REDFONT}Oracle instant client file doesnt exist.... please download from Oracle website..${NORMALFONT}"
+         echo -e "${REDFONT}Oracle instant client file doesnt exist.... please download from Oracle website.."
+         echo -e "This installation requires 2 Oracle instant client files: basic and sdk ${NORMALFONT}"
       else
          echo -e "${REDFONT}Oracle instant client file $INSTCLIENTFILE has been found.... but it is not for linux, please download the correct file!..${NORMALFONT}"
       fi
@@ -247,7 +276,8 @@ install_oracle_instantclient()
          INSTCLIENTSDKFILE=`find . -name "*${INSTCLIENTKEYWORD}*sdk*" -print -quit`
          if [[ "$INSTCLIENTSDKFILE" = "" ]]
          then
-             echo -e "${REDFONT}Oracle instant client sdk file doesnt exist.... please download from Oracle website..${NORMALFONT}"
+             echo -e "${REDFONT}Oracle instant client sdk file doesnt exist.... please download from Oracle website.."
+             echo -e "This installation requires 2 Oracle instant client files: basic and sdk ${NORMALFONT}"
          else
              echo -e "${REDFONT}Oracle instant client sdk file $INSTCLIENTSDKFILE has been found.... but not for linux, please download the correct file!....${NORMALFONT}"
          fi
@@ -283,4 +313,4 @@ install_oracle_instantclient()
    install_dbd_oracle
    install_dbd_postgres
    install_ora2pg
-checking_ora2pg
+   checking_ora2pg
