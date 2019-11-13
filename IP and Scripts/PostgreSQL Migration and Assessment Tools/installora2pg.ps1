@@ -1,27 +1,27 @@
-﻿#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# $Id: installora2pg.ps1 16 2019-10-14 22:33:44Z bpahlawa $
-# $Date: 2019-10-15 09:33:44 +1100 (Tue, 15 Oct 2019) $
-# $Revision: 16 $
+﻿# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# $Id: installora2pg.ps1 17 2019-10-20 10:12:44Z bpahlawa $
+# $Date: 2019-10-20 21:12:44 +1100 (Sun, 20 Oct 2019) $
+# $Revision: 17 $
 # $Author: bpahlawa $
-#
+# 
 
-#Parameter to be passed by this program when running as administrator
+# Parameter to be passed by this program when running as administrator
 param (
     [string]$Flag = 0
 )
 
-#location to install git
+# location to install git
 $GitFolder="C:\github";
-#repository location to clone ora2pg source
+# repository location to clone ora2pg source
 $ora2pgGit="https://github.com/darold/ora2pg.git";
-#temp directory to install ora2pg
+# temp directory to install ora2pg
 $ora2pgTemp="C:\ora2pgTemp";
-#location to install ORACLE_HOME instant client
+# location to install ORACLE_HOME instant client
 $Global:oraclehome="C:\instantclient_12_2";
-#location to write a log file
+# location to write a log file
 $Global:Logfile = "c:\installora2pg.log"
 
-#function to display message and also write to a logfile
+# function to display message and also write to a logfile
 Function Write-OutputAndLog
 {
    Param ([string]$Message)
@@ -29,54 +29,54 @@ Function Write-OutputAndLog
    Add-content "$Global:Logfile" -value "$message"
 }
 
-#function to install perl
+# function to install perl
 Function Install-Perl {
-  #installation path parameter
+  # installation path parameter
   Param(
     [string] $installationPath
   )
 
-  #Browse the web where perl is downloaded
+  # Browse the web where perl is downloaded
   $urlperl="http://strawberryperl.com/"
   Write-OutputAndLog "Browsing $urlperl"
   
 
-  #Get version of latest strawberry perl from the web
+  # Get version of latest strawberry perl from the web
   Write-OutputAndLog "Getting version of strawberry-perl..."
   $RetVal = ( Invoke-WebRequest $urlperl ) -Match "href=.*strawberry-perl-([0-9.]+).*" 
   $Version = $Matches.1
 
-  #check whether perl version can be gathered from the web
+  # check whether perl version can be gathered from the web
   if ($retval -eq $true)
   {
       Write-OutputAndLog "Latest version is $Version"
-	  #url link where the perl installation file can be downloaded
+	  # url link where the perl installation file can be downloaded
       $url = ("http://strawberryperl.com/download/$Version/strawberry-perl-$Version-64bit.msi" -f $Version);
       
   }
   else
   {
-      #unable to get the file from web or website may be down
+      # unable to get the file from web or website may be down
       Write-OutputAndLog "Unable to get the strawberry perl version from strawberryperl website..."
 	  write-outputAndLog "........Press any key to exit............"
 	  $null = $Host.UI.RawUI.ReadKey('NoEcho,IncludeKeyDown');
       exit
   }
 
-  #initialize options as an array
+  # initialize options as an array
   $options = @();
 
-  #check whether installationPath is available, if it is then install perl
+  # check whether installationPath is available, if it is then install perl
   if ($installationPath) {
     $options += ('INSTALLDIR="{0}"' -f $installationPath);
   }
-  #execute install perl
+  # execute install perl
   Install-FromMsi -Name 'perl' -Url $url -Options $options;
 }
 
-#function to install msi application
+# function to install msi application
 Function Install-FromMsi {
-    #required parameters are name and url
+    # required parameters are name and url
     Param(
         [Parameter(Mandatory)]
         [string] $name,
@@ -88,19 +88,19 @@ Function Install-FromMsi {
         [string[]] $options = @()
     )
 
-    #once it is downloaded it will be stored in the location that is assigned to this variable
+    # once it is downloaded it will be stored in the location that is assigned to this variable
     $installerPath = Join-Path ([System.IO.Path]::GetTempPath()) ('{0}.msi' -f $name);
 
-    #check whether msi application has been installed
-	#Supress error
+    # check whether msi application has been installed
+	# Supress error
     $ErrorActionPreference = 'SilentlyContinue'
 
-    #Execute the command even if it doesnt exist
+    # Execute the command even if it doesnt exist
     $result = Invoke-Expression -command "$name --version"
     $ErrorActionPreference = 'Continue'
 
-    #if the $result variable is null then the command isnt installed 
-	#otherwise it will display $name has been installed and return to main program
+    # if the $result variable is null then the command isnt installed 
+	# otherwise it will display $name has been installed and return to main program
     if ($result -ne $null)
     {
         write-outputAndLog "$name has been installed.."
@@ -111,7 +111,7 @@ Function Install-FromMsi {
         Write-OutputAndLog "Will be downloading $name from $url"
     }
 
-    #if the $installerpath file isnt available then download the file
+    # if the $installerpath file isnt available then download the file
     if (  ( Test-Path -path $installerPath ) -eq  $false)
     {
        Write-OutputAndLog ('Downloading {0} installer from {1} ..' -f $name, $url);
@@ -123,21 +123,21 @@ Function Install-FromMsi {
        Write-OutputAndLog "File $InstallerPath has been downloaded..." 
     }
 
-    #add necessary arguments to install quietly
+    # add necessary arguments to install quietly
     $args = @('/i', $installerPath, '/quiet', '/qn');
     $args += $options;
 
-    #display message
+    # display message
     Write-OutputAndLog ('Installing {0} ...' -f $name);
     Write-OutputAndLog ('msiexec {0}' -f ($args -Join ' '));
 
-    #execute installation
+    # execute installation
     Start-Process msiexec -Wait -ArgumentList $args;
 
-    # Update path
+    #  Update path
     $env:PATH = [Environment]::GetEnvironmentVariable('PATH', [EnvironmentVariableTarget]::Machine);
 
-    #verify whether the application is installed successfully
+    # verify whether the application is installed successfully
     if (!$noVerify) {
         Write-OutputAndLog ('Verifying {0} install ...' -f $name);
         $verifyCommand = (' {0} --version' -f $name);
@@ -145,7 +145,7 @@ Function Install-FromMsi {
         Invoke-Expression $verifyCommand;
     }
 
-    #remove the installation file
+    # remove the installation file
     Write-OutputAndLog ('Removing {0} installer ...' -f $name);
     Remove-Item $installerPath -Force;
 
@@ -153,7 +153,7 @@ Function Install-FromMsi {
 }
 
 
-#function to install from Exe file
+# function to install from Exe file
 Function Install-FromExe {
     Param(
         [Parameter(Mandatory)]
@@ -166,17 +166,17 @@ Function Install-FromExe {
         [string[]] $options = @()
     )
 
-    #download file will be store in the location that is pointed by $installerPath
+    # download file will be store in the location that is pointed by $installerPath
     $installerPath = Join-Path ([System.IO.Path]::GetTempPath()) ('{0}.exe' -f $name);
 
-    #if this is git installation then check whether the destination folder is set
+    # if this is git installation then check whether the destination folder is set
     if ( (Test-path -path $GitFolder) -eq $True) 
     {
-	    #goto $gitfolder\bin
+	    # goto $gitfolder\bin
         Set-location "$GitFolder\bin"
-		#supress error
+		# supress error
         $ErrorActionPreference = 'SilentlyContinue';
-        #check whether git has been installed
+        # check whether git has been installed
 		$result = Invoke-Expression -command ".\$name --version"
 
         write-outputAndLog "result is $result"
@@ -193,7 +193,7 @@ Function Install-FromExe {
            write-outputAndLog "$name does not exist..."
         }
     }
-    #check whether the file is available, if it is not then download the file from the given url
+    # check whether the file is available, if it is not then download the file from the given url
     if (  ( Test-Path -path $installerPath ) -eq  $false)
     {
         Write-OutputAndLog ('Downloading {0} installer from {1} ..' -f $name, $url);
@@ -206,17 +206,17 @@ Function Install-FromExe {
     }
     else
     {
-	   #display message that file has been downloaded 
+	   # display message that file has been downloaded 
        Write-OutputAndLog "File $InstallerPath has been downloaded..."
     }
 
-    #execute installation process
+    # execute installation process
     Start-Process $installerPath -Wait -ArgumentList $options;
 
-    # Update path
+    #  Update path
      $env:PATH = "$([Environment]::GetEnvironmentVariable('PATH', [EnvironmentVariableTarget]::Machine));{0}\bin" -f $GitFolder;
 
-    #verify whether the installation is successfull
+    # verify whether the installation is successfull
     if (!$noVerify) {
         Write-OutputAndLog ('Verifying {0} install ...' -f $name);
         $verifyCommand = (' {0} --version' -f $name);
@@ -224,14 +224,14 @@ Function Install-FromExe {
         Invoke-Expression $verifyCommand;
     }
 
-    #Remove temp file
+    # Remove temp file
     Write-OutputAndLog ('Removing {0} installer ...' -f $name);
     Remove-Item $installerPath -Force;
 
     Write-OutputAndLog ('{0} install complete.' -f $name);
 }
 
-#function to remove all tempfiles under c:/windows/temp
+# function to remove all tempfiles under c:/windows/temp
 Function Remove-TempFiles {
     $tempFolders = @($env:temp, 'C:/Windows/temp')
 
@@ -255,16 +255,16 @@ Function Remove-TempFiles {
     Write-OutputAndLog ('Removed {0} files from temporary directories' -f $filesRemoved)
 }
 
-#function to check internet connection
+# function to check internet connection
 Function Check-Internet()
 {
 
     $ErrorActionPreference = 'SilentlyContinue'
-	#check connection to microsoft.com, this is to ensure that the location where the script is run has internet connection
+	# check connection to microsoft.com, this is to ensure that the location where the script is run has internet connection
     $Result = (Invoke-WebRequest "http://microsoft.com" -ErrorAction SilentlyContinue)
     $ErrorActionPreference = 'Continue'
 
-    #if $result isnt null then internet is available, otherwise exit out
+    # if $result isnt null then internet is available, otherwise exit out
     if ($Result -eq $null)
     {
     
@@ -276,25 +276,25 @@ Function Check-Internet()
 
 }
 
-#function to check oracleclient
+# function to check oracleclient
 Function Check-OracleClient()
 {
-     #parameter for instant client path
+     # parameter for instant client path
      Param(
         [String] $OracleInstallPath
       )
 
-    #check whether oracle instant client/oracle client has been installed by searching oci.dll
+    # check whether oracle instant client/oracle client has been installed by searching oci.dll
 	if ($oracleinstallpath -ne $null)
     {
-	   #search oci.dll from location $oracleinstallpath
+	   # search oci.dll from location $oracleinstallpath
        write-outputAndLog "Searching oci.dll from Directory $oracleinstallpath..."
        $result = Get-Childitem –Path "$oracleinstallpath" -Include oci.dll -Recurse -ErrorAction SilentlyContinue 
        
     }
     else
     {
-	   #Search oci.dll from all logical drives recursively
+	   # Search oci.dll from all logical drives recursively
        write-outputAndLog "Searching oci.dll from all Logical drives..."
        foreach ( $Disk in (Get-Volume | where { $_.DriveLetter -ne $null })) {
            $result = Get-childitem -path "$($Disk.DriveLetter):\" -include oci.dll -recurse -erroraction SilentlyContinue 
@@ -304,21 +304,21 @@ Function Check-OracleClient()
 
     }
 	
-	#if no oci.dll to be found, then this script will display message where to download the oracle instant client
+	# if no oci.dll to be found, then this script will display message where to download the oracle instant client
 	if ($result -eq $null)
     {
-	    #url of base oracle instant client and sdk
+	    # url of base oracle instant client and sdk
         $baseoracle = "https://download.oracle.com/otn/nt/instantclient/122010/instantclient-basic-windows.x64-12.2.0.1.0.zip"
         $sdkoracle = "https://download.oracle.com/otn/nt/instantclient/122010/instantclient-sdk-windows.x64-12.2.0.1.0.zip"
 
-        #get the file name
+        # get the file name
         $baseoraclezipfile=split-path -path $baseoracle -leaf
         $sdkoraclezipfile=Split-Path -path $sdkoracle -leaf
 		
-		#check if those 2 files are available
+		# check if those 2 files are available
         if ( (Test-Path -path "$Global:ScriptDir\$baseoraclezipfile" ) -eq $false -or (Test-Path -path "$Global:ScriptDir\$sdkoraclezipfile" ) -eq $false  )
         {
-		    #one or both files do not exist, therefore display the following messages
+		    # one or both files do not exist, therefore display the following messages
             write-outputAndLog "Oracle client and SDK are required..."
             write-outputAndLog "Please download base Instantclient from:`n$baseoracle"
             write-outputAndLog "and`n$sdkoracle"
@@ -330,7 +330,7 @@ Function Check-OracleClient()
         }
         else
         {
-		    #those files exist, therefore extract them
+		    # those files exist, therefore extract them
             write-outputAndLog "Extracting file $Global:ScriptDir\$baseoraclezipfile ..."
             Expand-Archive -LiteralPath "$Global:ScriptDir\$baseoraclezipfile" -DestinationPath "c:\"
             write-outputAndLog "Extracting file $Global:ScriptDir\$sdkoraclezipfile ..."
@@ -339,7 +339,7 @@ Function Check-OracleClient()
     }
     else
     {
-	    #found oci.dll somewhere which means that oracle client is installed
+	    # found oci.dll somewhere which means that oracle client is installed
         write-outputAndLog "Found OCI.dll in $($result.FullName)"
         $Global:oraclehome = Split-Path -path $result.FullName
     }
@@ -347,43 +347,43 @@ Function Check-OracleClient()
 
 }
 
-#function to install ora2pg
+# function to install ora2pg
 Function install-Ora2Pg()
 {
-    #set parent directory to c:\
+    # set parent directory to c:\
     cd c:\
     write-outputAndLog "Setting environment variable..."
-	#Add $gitfolder to path environment variable so git can be run
+	# Add $gitfolder to path environment variable so git can be run
     $env:PATH = "$([Environment]::GetEnvironmentVariable('PATH', [EnvironmentVariableTarget]::Machine));{0}\bin" -f $GitFolder;
 
     write-outputAndLog "Checking whether ora2pg has been installed..."
-	#supress error
+	# supress error
     $ErrorActionPreference = 'SilentlyContinue'
-	#execute ora2pg --version even if it doesnt exist
+	# execute ora2pg --version even if it doesnt exist
     if ( (Invoke-expression "ora2pg --version") -eq $null)
     {
-	    #unsupress error
+	    # unsupress error
         $ErrorActionPreference = 'Continue'
         write-outputAndLog "ora2pg does not exist..."
 		
-		#if there is ora2pg on tempfile then delete it
+		# if there is ora2pg on tempfile then delete it
         if ((Test-path -path $ora2pgTemp) -eq $True)
         {
             Remove-item $ora2pgTemp -Recurse -Force
         }
         write-outputAndLog "Cloning git repo to $ora2pgTemp ..."
 
-        #supress error
+        # supress error
         $ErrorActionPreference = 'SilentlyContinue'
-		#execute git clone ora2pg even if it doesnt exist (assuming it does exist)
+		# execute git clone ora2pg even if it doesnt exist (assuming it does exist)
         Invoke-expression -command "git clone $ora2pgGit $ora2pgTemp" 
-		#unsupress error
+		# unsupress error
         $ErrorActionPreference = 'Continue'
 
-        #Check whether ora2pg has been downloaded
+        # Check whether ora2pg has been downloaded
         if ( (Test-path -path $ora2pgTemp) -eq $True)
         {
-		   #this is to force ora2pg recompilation just incase there is a problem with the previous step
+		   # this is to force ora2pg recompilation just incase there is a problem with the previous step
            cd $ora2pgTemp
            $ErrorActionPreference = 'SilentlyContinue'
            perl Makefile.PL
@@ -396,14 +396,14 @@ Function install-Ora2Pg()
     }
     else
     {
-	    #display message that ora2pg has been installed
+	    # display message that ora2pg has been installed
         write-outputAndLog "ora2pg is currently existing.. in order to upgrade it, please delete ora2pg.bat under strawberryperl bin directory.."
         return
     }
 
 }
 
-#function to install perl library from CPAN
+# function to install perl library from CPAN
 Function Install-PerlLib()
 {
     Param(
@@ -414,7 +414,7 @@ Function Install-PerlLib()
     write-outputAndLog "Executing cpan to install $name ..."
     $DirName = $name.replace("::","-")
     
-    #check if the library.pm exists, if it is then delete the library.pm before it can be re-installed
+    # check if the library.pm exists, if it is then delete the library.pm before it can be re-installed
     foreach ( $Disk in (Get-Volume | where { $_.DriveLetter -ne $null })) {
            $result = Get-childitem -path "$($Disk.DriveLetter):\strawberry" -Include "$Dirname*" -Exclude ("$Dirname*.pm","$Dirname*.gz") -recurse -erroraction SilentlyContinue 
            if ($result -ne $null)
@@ -425,12 +425,12 @@ Function Install-PerlLib()
        }
 
     
-    #exeucte cpan 
+    # exeucte cpan 
     invoke-Expression -command "cpan -i $name"
     set-location "$result"
-	#supress error
+	# supress error
     $ErrorActionPreference = 'SilentlyContinue'
-	#install perl library and if it is oracle it will force to use version 12.2.0
+	# install perl library and if it is oracle it will force to use version 12.2.0
     perl Makefile.PL -V 12.2.0
     gmake
     gmake install
@@ -439,55 +439,56 @@ Function Install-PerlLib()
     
 }
 
-    #this is an entry point of this powershell script
+    # this is an entry point of this powershell script
 	
-    #get the script name
+    # get the script name
 	$TheScriptName = $MyInvocation.MyCommand.Name
 
-    #check whether this script has been running
+    # check whether this script has been running
 	$handle = get-process | where { $_.name -like 'powershell*' }
 
-    #check if the parameter has been passed to this scirpt
+    # check if the parameter has been passed to this scirpt
 	if ( $Flag -eq 0 -and $handle.count -lt 4 )
 	{
-	    #if not then execute this script as administrator
+	    # if not then execute this script as administrator
 		Start-process Powershell -verb runas -ArgumentList "-file `"$($MyInvocation.MyCommand.Definition)`" 1"
 		$Env:ScriptName="$TheScriptName"
-		#this will exit out but it will spawn this script again with administrator privilege
+		# this will exit out but it will spawn this script again with administrator privilege
 	}
 	else
 	{
-	    #get the script directory location
+	    # get the script directory location
         $Global:ScriptDir = Split-Path $script:MyInvocation.MyCommand.Path
-		#execute the functions to check internet, install perl and oracle client
+		# execute the functions to check internet, install perl and oracle client
 		Check-Internet
 		install-perl
 		Check-OracleClient "$Global:oraclehome"
 
-        #install portable git from the following url
+        # install portable git from the following url
 		Install-FromExe -name git -url https://github.com/git-for-windows/git/releases/download/v2.23.0.windows.1/PortableGit-2.23.0-64-bit.7z.exe "-o $GitFolder -y"
 
-        #set ORACLE_HOME and LD_LIBRARY_PATH environment variables
+        # set ORACLE_HOME and LD_LIBRARY_PATH environment variables
 		$env:ORACLE_HOME="$Global:oraclehome"
 		$env:LD_LIBRARY_PATH="$Global:oraclehome"
 		 
-		#Check whether Oracle.pm is installed, if not then execute install perl library for DBD::Oracle
+		# Check whether Oracle.pm is installed, if not then execute install perl library for DBD::Oracle
         $result = Get-ChildItem -path "C:\strawberry" -Include "Oracle.pm" -recurse
         if ($result -eq $null)
 		{
             install-perllib "DBD::Oracle"
         }
-		#check whether Pg.om is installed, if not then execute install per library for DBD::Pg
+		# check whether Pg.om is installed, if not then execute install per library for DBD::Pg
         $result = Get-ChildItem -path "C:\strawberry" -Include "Pg.pm" -recurse
         if ($result -eq $null)
         {
             install-perllib "DBD::Pg"
         }
-		#install ora2pg
+		# install ora2pg
 		install-Ora2Pg
         Write-OutputAndLog "`n=====================================================================================================`n`n"
-		write-outputAndLog "........Press any key to exit............"
-		#requires press any key to exit
+		write-outputAndLog "........Press any key to exit............";
+		
+		#  requires press any key to exit
 		$null = $Host.UI.RawUI.ReadKey('NoEcho,IncludeKeyDown');
 
 }
