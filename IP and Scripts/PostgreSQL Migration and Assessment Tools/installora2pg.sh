@@ -1,3 +1,4 @@
+#/***This Artifact belongs to the Data Migration Jumpstart Engineering Team***/
 #!/bin/bash
 # $Id: installora2pg.sh 204 2019-11-02 06:21:04Z bpahlawa $
 # Created 20-AUG-2019

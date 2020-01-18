@@ -1,4 +1,5 @@
-﻿IF OBJECT_ID('TempDB..#PartitionInformation') IS NOT NULL
+﻿/***This Artifact belongs to the Data Migration Jumpstart Engineering Team***/
+IF OBJECT_ID('TempDB..#PartitionInformation') IS NOT NULL
 DROP TABLE #PartitionInformation
 GO
 

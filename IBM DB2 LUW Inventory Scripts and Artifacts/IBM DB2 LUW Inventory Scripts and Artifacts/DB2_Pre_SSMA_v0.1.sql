@@ -1,4 +1,4 @@
-﻿--
+﻿-- 			/***This Artifact belongs to the Data Migration Jumpstart Engineering Team***/
 -- Pre SSMA Query Script
 -- For DB2 LUW
 -- Version 0.1

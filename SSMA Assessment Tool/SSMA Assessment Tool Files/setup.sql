@@ -1,3 +1,4 @@
+		/***This Artifact belongs to the Data Migration Jumpstart Engineering Team***/
 set nocount on
 
 --Instance setup

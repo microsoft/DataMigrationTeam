@@ -1,3 +1,4 @@
+#/***This Artifact belongs to the Data Migration Jumpstart Engineering Team***/
 ############################################################################################################
 # Author: Paula Berenguel - Jul-17
 # Description: This PowerShell script will create a resource group named mls_rg in EAST US location

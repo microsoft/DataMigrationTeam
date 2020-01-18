@@ -1,3 +1,4 @@
+#/***This Artifact belongs to the Data Migration Jumpstart Engineering Team***/
 ######################################################################################################################################################
 # Author: Paula Berenguel - Jul-17
 # Description: 	This script will create a elastic pool and add databases to it

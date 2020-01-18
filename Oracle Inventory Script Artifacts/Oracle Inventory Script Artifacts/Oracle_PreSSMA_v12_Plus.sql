@@ -1,3 +1,4 @@
+		/***This Artifact belongs to the Data Migration Jumpstart Engineering Team***/
 REM FUNCTION:   List the count of objects for each object type under each non-system schema
 REM REQUIRES:   v$instance, sys.all_objects
 REM

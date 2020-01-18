@@ -1,3 +1,4 @@
+	/***This Artifact belongs to the Data Migration Jumpstart Engineering Team***/
 --
 -- Netezza Inventory Script
 -- Object Inventory Overview

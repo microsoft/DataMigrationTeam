@@ -1,3 +1,4 @@
+			/***This Artifact belongs to the Data Migration Jumpstart Engineering Team***/
 Set of 4 inventory scripts that collect Netezza database, object, and schema data about the databases on in the Netezza environment.
 
 Scripts are run from Netezza Linux command line.

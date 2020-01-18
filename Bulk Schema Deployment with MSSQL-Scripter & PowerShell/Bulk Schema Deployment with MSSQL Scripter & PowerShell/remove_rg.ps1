@@ -1,3 +1,4 @@
+#/***This Artifact belongs to the Data Migration Jumpstart Engineering Team***/
 ##########################################################################
 # Creator: Paula Berenguel - Jul/2017
 # This PowerShell script will remove a resource group named mlsresource,

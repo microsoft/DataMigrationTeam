@@ -1,3 +1,4 @@
+#/***This Artifact belongs to the Data Migration Jumpstart Engineering Team***/
 ##########################################################################
 # This PowerShell script will create a resource group named mlsresource,
 # An Azure SQL Server named psserver1 and a list of Azure SQL Databases (psdb1 and psdb2)

@@ -1,3 +1,5 @@
+#	/***This Artifact belongs to the Data Migration Jumpstart Engineering Team***/
+		
 #
 # ConvertNetezza_to_SQLDW.ps1
 #

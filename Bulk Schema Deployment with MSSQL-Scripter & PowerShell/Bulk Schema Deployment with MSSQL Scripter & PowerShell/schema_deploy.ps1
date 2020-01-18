@@ -1,3 +1,4 @@
+#/***This Artifact belongs to the Data Migration Jumpstart Engineering Team***/
 ##########################################################################
 # This PowerShell script will deploy an schema to a Azure SQL db
 # How to run the script? & "C:\MyPS\schema_deploy.ps1"

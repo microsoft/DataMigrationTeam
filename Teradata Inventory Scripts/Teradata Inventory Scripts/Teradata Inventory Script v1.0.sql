@@ -1,3 +1,4 @@
+		/***This Artifact belongs to the Data Migration Jumpstart Engineering Team***/
 --
 -- Teradata Inventory Script
 -- Database and Table Sizes

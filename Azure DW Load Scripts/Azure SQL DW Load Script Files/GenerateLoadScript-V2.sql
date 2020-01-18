@@ -1,3 +1,4 @@
+/***This Artifact belongs to the Data Migration Jumpstart Engineering Team***/
 declare @sourceschema varchar(128) = 'SRC_POC_DM'
 declare @targetschema varchar(128) = 'TARG_POC_DM'
 declare @blobstore varchar(100) = '<account>.blob.core.windows.net'

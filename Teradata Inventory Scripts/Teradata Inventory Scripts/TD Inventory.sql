@@ -1,3 +1,4 @@
+		/***This Artifact belongs to the Data Migration Jumpstart Engineering Team***/
 -- Teradata Version Information
 SELECT * FROM DBC.DBCInfo;
 

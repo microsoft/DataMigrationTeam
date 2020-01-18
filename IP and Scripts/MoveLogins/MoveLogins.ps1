@@ -1,4 +1,4 @@
-﻿#
+﻿# /***This Artifact belongs to the Data Migration Jumpstart Engineering Team***/
 # Name:     MoveLogins.ps1
 #
 # Author:   Mitch van Huuksloot, Data Migration Jumpstart Engineering Team, Microsoft Corporation

@@ -1,3 +1,4 @@
+#/***This Artifact belongs to the Data Migration Jumpstart Engineering Team***/
 # Auto Generate Azure SQL DW Load – TSQL Scripts
 
 Script Author: Mitch van Huuksloot, Solution Architect, Data Migration Jumpstart Engineering Team

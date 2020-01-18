@@ -1,3 +1,5 @@
+/***This Artifact belongs to the Data Migration Jumpstart Engineering Team***/
+
 CREATE PROCEDURE    [dbo].[prc_sqldw_create_stats]
 (   @create_type    tinyint -- 1 default 2 Fullscan 3 Sample
 ,   @sample_pct     tinyint
