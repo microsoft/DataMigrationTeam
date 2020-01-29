@@ -1,3 +1,0 @@
-The Netezza DDL converter utility is tool to convert Netezza database schema DDL to SQL equivalent.
-The highlight of this utility is that it can convert Netezza MPP DDL to SQL MPP or SMP equivalent,
-which means it supports the conversion to Azure SQL DW, Azure SQL DB, Azure SQL MI and SQL Server on-premises. 
