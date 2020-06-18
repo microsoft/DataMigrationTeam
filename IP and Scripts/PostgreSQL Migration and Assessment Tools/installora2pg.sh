@@ -1,14 +1,15 @@
-#/***This Artifact belongs to the Data Migration Jumpstart Engineering Team***/
 #!/bin/bash
-# $Id: installora2pg.sh 204 2019-11-02 06:21:04Z bpahlawa $
+# $Id: installora2pg.sh 255 2020-03-24 06:34:25Z bpahlawa $
 # Created 20-AUG-2019
 # $Author: bpahlawa $
-# $Date: 2019-11-02 17:21:04 +1100 (Sat, 02 Nov 2019) $
-# $Revision: 204 $
+# $Date: 2020-03-24 17:34:25 +1100 (Tue, 24 Mar 2020) $
+# $Revision: 255 $
 
 
 ORA2PG_GIT="https://github.com/darold/ora2pg.git"
 DBD_ORACLE="https://www.cpan.org/modules/by-module/DBD"
+PGSQLREPO="https://yum.postgresql.org/repopackages.php"
+PGVER="11"
 INSTCLIENTKEYWORD="instantclient"
 TMPFILE=/tmp/$0.$$
 
@@ -21,10 +22,19 @@ YELLOWFONT="\e[0;34;2;10m"
 
 trap exitshell SIGINT SIGTERM
 
+
+[[ "$1" != "" ]] && export PGVER="$1"
+
 exitshell()
 {
    echo -e "${NORMALFONT}Cancelling script....exiting....."
    exit 0
+}
+
+get_rhel_ver()
+{
+   [[ ! -f /etc/redhat-release ]] && echo "This is not Redhat/Centos distro, exiting...." && exit 1
+   export RHELVER=`cat /etc/redhat-release | sed "s/.* \([0-9]\)\..*/\1/"`
 }
 
 yum_install()
@@ -51,10 +61,15 @@ check_internet_conn()
    yum_install curl
    yum_install git
    yum_install perl-open
+   yum_install perl-version
    yum_install perl-ExtUtils-MakeMaker
    yum_install perl-DBI
+   yum_install perl-Test-Simple
+   yum_install libaio-devel
    yum_install make
    yum_install gcc
+   yum_install libnsl
+   yum_install libaio
    curl -kS --verbose --header 'Host:' $ORA2PG_GIT 2> $TMPFILE
    export GITHOST=`cat $TMPFILE | sed -n -e "s/\(.*CN=\)\([a-z0-9A-Z\.]\+\)\(,.*\|$\)/\2/p"`
    export GITIP=`ping -c1 -w1 github.com | sed -n -e "s/\(.*(\)\([0-9]\+\.[0-9]\+\.[0-9]\+\.[0-9]\+\)\().*\)/\2/p"`
@@ -65,7 +80,7 @@ check_internet_conn()
 install_dbd_postgres()
 {
    echo -e "${BLUEFONT}Finding pg_config, if it has multiple pg_config then latest version will be used"
-   PGCONFIGS=`find / -name "pg_config"`
+   PGCONFIGS=`find / -name "pg_config" | grep pgsql-${PGVER}`
 
    if [ "$PGCONFIGS" = "" ]
    then
@@ -170,6 +185,25 @@ install_ora2pg()
 
 }
 
+install_pgclient()
+{
+   get_rhel_ver
+   PGCLIENT=`curl -kS "${PGSQLREPO}" | grep "EL-${RHELVER}-x86_64" | grep -v "non-free" | tail -1 | sed -n 's/\(.*="\)\(https.*rpm\)\(".*\)/\2/p'`
+   rpm -ivh $PGCLIENT
+   [[ $RHELVER -ge 8 ]] && yum -y module disable postgresql
+   yum -y install postgresql${PGVER}
+   
+}
+
+install_additional_libs()
+{
+   get_rhel_ver
+   if [ "${RHELVER}" = "6" ]
+   then
+      yum install -y perl-Time-modules perl-Time-HiRes
+   fi
+}
+   
 
 checking_ora2pg()
 {
@@ -210,7 +244,21 @@ checking_ora2pg()
    
    export PATH=/usr/local/bin:$PATH
    ORA2PGBIN=`which ora2pg`
-   RESULT=`su - $THEUSER -c "$ORA2PGBIN" 2>&1`
+
+   if [ "$THEUSER" = "root" ]
+   then
+      RESULT=`$ORA2PGBIN 2>&1`
+   else
+      RESULT=`su - $THEUSER -c "$ORA2PGBIN" 2>&1`
+      if [ $? -ne 0 ]
+      then
+         CHECKERROR=`su - $THEUSER -c "$ORA2PGBIN 2>&1 | grep \"Can't locate\" | sed \"s/.*contains: \(.*\) \.).*$/\1/g\""`
+         for THEDIR in $CHECKERROR
+         do
+            [[ -d $THEDIR ]] && echo "setting read and executable permission on PERL lib directory $THEDIR" && chmod o+rx $THEDIR
+         done
+      fi
+   fi
    if [ $? -ne 0 ]
    then
       if [[ $RESULT =~ ORA- ]]
@@ -298,10 +346,23 @@ install_oracle_instantclient()
    [[ $(whoami) != "root" ]] && echo -e "${REDFONT}This script must be run as root or with sudo...${NORMALFONT}" && exit 1
    check_internet_conn
    echo -e "${BLUEFONT}Checking oracle installation locally....."
-   LIBFILE=`find / -name "libclntsh.so*" 2>/dev/null| grep -Ev "stage|inventory" | tail -1 2>/dev/null`
+
+   echo -e "${BLUEFONT}Checking ORACLE_HOME environment variable...."
+   if [ "$ORACLE_HOME" != "" ]
+   then
+      if [ ! -d $ORACLE_HOME ]
+      then
+         echo -e "${BLUEFONT}The $ORACLE_HOME is not a directory, so searchig from root directory / ...."
+         LIBFILE=`find / -name "libclntsh.so*" 2>/dev/null| grep -Ev "stage|inventory" | tail -1 2>/dev/null`
+      else
+         LIBFILE=`find $ORACLE_HOME -name "libclntsh.so*" 2>/dev/null| grep -Ev "stage|inventory" | tail -1 2>/dev/null`
+      fi
+   else
+      LIBFILE=`find / -name "libclntsh.so*" 2>/dev/null| grep -Ev "stage|inventory" | tail -1 2>/dev/null`
+   fi
    if [ "$LIBFILE" = "" ]
    then
-      echo -e "${BLUEFONT}oracle instantclient needs to be installed"
+      echo -e "${BLUEFONT}oracle instantclient needs to be installed or $ORACLE_HOME is not correct"
       install_oracle_instantclient
    else
       if [[ $LIBFILE =~ .*${INSTCLIENTKEYWORD}.*$ ]]
@@ -311,7 +372,9 @@ install_oracle_instantclient()
          export ORACLE_HOME="${LIBFILE%/*/*}"
       fi
    fi
+   install_additional_libs
    install_dbd_oracle
+   install_pgclient
    install_dbd_postgres
    install_ora2pg
    checking_ora2pg
