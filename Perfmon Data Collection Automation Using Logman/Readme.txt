@@ -1,0 +1,2 @@
+The purpose of this document is to collect Performance Monitor Data from SQL Server Farm. We discover and Assess 100’s of SQL Server Instance, collecting Perfmon Data for baseline from this server’s is very manual process, customer and we get into many issues for this collection.
+This tool uses logman.exe to create the command which will create, start, stop and delete the performance counter set on the remote SQL Server Machines.
