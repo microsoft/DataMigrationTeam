@@ -1,4 +1,4 @@
-			/***This Artifact belongs to the Data Migration Jumpstart Engineering Team***/
+			/***This Artifact belongs to the Data SQL Ninja Engineering Team***/
 -- FEATURE 1 (DATABASE_SIZE_MB)
 SELECT '01' AS FEATURE_ID,'Total Database Size' AS FEATURE_NAME , INT((A.SPACETS + B.SPACEIX)/1024) AS VALUE
 FROM 

@@ -1,2 +1,2 @@
-		/***This Artifact belongs to the Data Migration Jumpstart Engineering Team***/
+		/***This Artifact belongs to the Data SQL Ninja Engineering Team***/
 The result set is exported to the file that you specified. You can copy the file from the file system. 

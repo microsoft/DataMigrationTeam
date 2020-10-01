@@ -1,4 +1,4 @@
-#/***This Artifact belongs to the Data Migration Jumpstart Engineering Team***/
+#/***This Artifact belongs to the Data SQL Ninja Engineering Team***/
 ############################################################################################################
 # Author: Paula Berenguel - Jul-17
 # Description: This PowerShell script will create an Azure SQL Server named mls1dev

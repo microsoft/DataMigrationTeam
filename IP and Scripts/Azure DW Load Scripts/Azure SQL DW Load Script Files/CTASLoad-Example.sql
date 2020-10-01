@@ -1,4 +1,4 @@
-/***This Artifact belongs to the Data Migration Jumpstart Engineering Team***/
+/***This Artifact belongs to the Data SQL Ninja Engineering Team***/
 -- STEP 1: Create a master key. Only necessary if one does not already exist.
 CREATE MASTER KEY ENCRYPTION BY PASSWORD = 'MyUltraSecurePassword!12345!'; 
 GO

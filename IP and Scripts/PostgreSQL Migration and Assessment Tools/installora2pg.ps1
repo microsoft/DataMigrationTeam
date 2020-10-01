@@ -1,4 +1,4 @@
-﻿#/***This Artifact belongs to the Data Migration Jumpstart Engineering Team***/
+﻿#/***This Artifact belongs to the Data SQL Ninja Engineering Team***/
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # $Id: installora2pg.ps1 17 2019-10-20 10:12:44Z bpahlawa $
 # $Date: 2019-10-20 21:12:44 +1100 (Sun, 20 Oct 2019) $

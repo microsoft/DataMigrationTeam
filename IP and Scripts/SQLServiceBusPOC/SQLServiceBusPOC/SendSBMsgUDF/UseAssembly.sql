@@ -1,3 +1,4 @@
+/***This Artifact belongs to the Data SQL Ninja Engineering Team***/
 DROP TRIGGER testclr	-- drop CLR trigger in case it is active
 GO
 

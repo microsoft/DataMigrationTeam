@@ -1,3 +1,4 @@
+#This Artifact belongs to the Data SQL Ninja Engineering Team
 #!/usr/bin/perl
 #
 # initially created by Bram Pahlawanto

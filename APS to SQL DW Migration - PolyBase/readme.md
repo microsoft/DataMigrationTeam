@@ -1,4 +1,4 @@
-# /***This Artifact belongs to the Data Migration Jumpstart Engineering Team***/
+# /***This Artifact belongs to the Data SQL Ninja Engineering Team***/
 # APS to SQL DW Migration - Schema and Data Migration with PolyBase
 
 ## Contributors

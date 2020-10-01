@@ -1,4 +1,4 @@
-#/***This Artifact belongs to the Data Migration Jumpstart Engineering Team***/
+#/***This Artifact belongs to the Data SQL Ninja Engineering Team***/
 ######################################################################################################################################################
 # Author: Paula Berenguel - Jul-17
 # Description: 	This script will create one or more of empty databases in the server named mls1dev. 

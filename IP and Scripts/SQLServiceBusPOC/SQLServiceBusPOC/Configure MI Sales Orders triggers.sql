@@ -1,3 +1,4 @@
+/***This Artifact belongs to the Data SQL Ninja Engineering Team***/
 USE [WideWorldImporters]
 GO
 CREATE ASSEMBLY [SendSBMsg]

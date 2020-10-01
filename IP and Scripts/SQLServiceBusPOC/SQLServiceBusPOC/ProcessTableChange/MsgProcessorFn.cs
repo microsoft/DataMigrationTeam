@@ -14,7 +14,7 @@ using System.Collections;
 /*
 Title:  SendSBMsg
 Author: Mitch van Huuksloot, 
-        Data Migration Jumpstart Team
+        Data SQL Ninja Team
 Copyright © 2019 Microsoft Corporation
 
 The Sample Code below was developed by Microsoft Corporation technical architects.  Because Microsoft must respond to changing market conditions, this document should not be interpreted as an invitation to contract or a commitment on the part of Microsoft.
