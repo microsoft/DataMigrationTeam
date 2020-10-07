@@ -1,4 +1,4 @@
-#/***This Artifact belongs to the Data Migration Jumpstart Engineering Team***/
+#/***This Artifact belongs to the Data SQL Ninja Engineering Team***/
 PL/SQL query that hits oracle system tables 
 - Non-evasive query
 - Count of objects by schema, object type and status

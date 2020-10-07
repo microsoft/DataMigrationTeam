@@ -1,3 +1,4 @@
+# This Artifact belongs to the Data SQL Ninja Engineering Team
 # APS to SQL DW Migration – Data Migration with BCP and SSIS - Export
 
 ## Contributors

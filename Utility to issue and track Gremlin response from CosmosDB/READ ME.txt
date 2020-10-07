@@ -1,3 +1,3 @@
-		/***This Artifact belongs to the Data Migration Jumpstart Engineering Team***/
+		/***This Artifact belongs to the Data SQL Ninja Engineering Team***/
 Console app that connects to Cosmos DB graph and allows the execution of Gremlin commands,
 shows the results and times the response. 

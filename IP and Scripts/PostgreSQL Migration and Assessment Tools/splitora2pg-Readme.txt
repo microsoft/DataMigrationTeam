@@ -1,3 +1,4 @@
+/***This Artifact belongs to the Data SQL Ninja Engineering Team***/
 Pre-requisites
 ora2pg must have been installed and ora2pg.conf is located either on /etc/ora2pg/ora2pg.conf or the same directory as this script
 

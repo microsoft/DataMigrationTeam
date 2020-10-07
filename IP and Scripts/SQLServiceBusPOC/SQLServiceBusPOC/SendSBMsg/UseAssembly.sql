@@ -1,3 +1,4 @@
+/***This Artifact belongs to the Data SQL Ninja Engineering Team***/
 use WideWorldImporters
 go
 DROP TRIGGER sales.testclr_SO

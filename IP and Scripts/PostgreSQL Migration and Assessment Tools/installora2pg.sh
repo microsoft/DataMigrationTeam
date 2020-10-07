@@ -1,3 +1,4 @@
+#This Artifact belongs to the Data SQL Ninja Engineering Team
 #!/bin/bash
 # $Id: installora2pg.sh 255 2020-03-24 06:34:25Z bpahlawa $
 # Created 20-AUG-2019

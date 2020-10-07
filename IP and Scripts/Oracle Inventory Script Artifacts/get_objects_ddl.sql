@@ -1,3 +1,4 @@
+/***This Artifact belongs to the Data SQL Ninja Engineering Team***/
 --Created by Bram Pahlawanto
 --Initial Version 22-May-2018
 --$Id: get_objects_ddl.sql 176 2019-07-01 04:04:13Z bpahlawa $

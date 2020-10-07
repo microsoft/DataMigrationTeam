@@ -1,3 +1,4 @@
+/***This Artifact belongs to the Data SQL Ninja Engineering Team***/
 --Created by Bram Pahlawanto
 --Initial Version 22-May-2018
 --$Id: search_obj_in_sourcecode.sql 277 2020-04-30 00:48:02Z bpahlawa $

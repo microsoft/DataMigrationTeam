@@ -1,4 +1,4 @@
-#/***This Artifact belongs to the Data Migration Jumpstart Engineering Team***/
+#/***This Artifact belongs to the Data SQL Ninja Engineering Team***/
 #!/bin/python36
 # $Id: expimppostgres.py 167 2019-04-04 01:23:19Z bpahlawa $
 # Created 05-MAR-2019

@@ -1,4 +1,4 @@
-#Data Migration Jumpstart Engineering Team
+#Data SQL Ninja Engineering Team
 #Get-Module SqlServer -ListAvailable
 
 # Sign in to your Azure account

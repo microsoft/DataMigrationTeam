@@ -14,7 +14,7 @@ using System.Threading;
 /*
 Title:  SendSBMsgUDF
 Author: Mitch van Huuksloot, 
-        Data Migration Jumpstart Team
+        Data SQL Ninja Team
 
 The Sample Code below was developed by Microsoft Corporation technical architects.  Because Microsoft must respond to changing market conditions, this document should not be interpreted as an invitation to contract or a commitment on the part of Microsoft.
 Microsoft has provided high level guidance in this artifact with the understanding that the reader would undertake detailed design and comprehensive reviews of the overall solution before the solution would be implemented/delivered.  

@@ -1,7 +1,7 @@
-# /***This Artifact belongs to the Data Migration Jumpstart Engineering Team***/
+# /***This Artifact belongs to the Data SQL Ninja Engineering Team***/
 # Auto Generate Azure SQL DW Load – TSQL Scripts
 
-Script Author: Mitch van Huuksloot, Solution Architect, Data Migration Jumpstart Engineering Team
+Script Author: Mitch van Huuksloot, Solution Architect, Data SQL Ninja Engineering Team
 
 These scripts were developed to help with a large Azure SQL DW POC with one of the DMJ customers. Some of the assumptions made in the scripts are very specific to the scenario encountered at the customer. Feel free to adapt these scripts to your data loading scenario.
 

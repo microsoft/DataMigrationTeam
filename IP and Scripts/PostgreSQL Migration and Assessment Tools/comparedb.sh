@@ -1,4 +1,4 @@
-#/***This Artifact belongs to the Data Migration Jumpstart Engineering Team***/
+#/***This Artifact belongs to the Data SQL Ninja Engineering Team***/
 #!/bin/bash
 # $Id: comparedb.sh 159 2019-03-24 15:52:12Z bpahlawa $
 # Created 05-MAR-2019

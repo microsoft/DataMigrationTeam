@@ -1,4 +1,4 @@
-			/***This Artifact belongs to the Data Migration Jumpstart Engineering Team***/
+			/***This Artifact belongs to the Data SQL Ninja Engineering Team***/
 SQL query that hits IBM DB2 system tables 
 - So far, only tested so far on IBM DB2 LUW version 11.1
 - Non-evasive query

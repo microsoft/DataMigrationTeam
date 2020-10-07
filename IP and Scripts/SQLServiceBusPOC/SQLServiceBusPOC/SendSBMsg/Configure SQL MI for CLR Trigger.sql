@@ -1,3 +1,4 @@
+/***This Artifact belongs to the Data SQL Ninja Engineering Team***/
 use master
 go
 CREATE CERTIFICATE [SQLCLR-Cert]

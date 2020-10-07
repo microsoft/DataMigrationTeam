@@ -1,4 +1,4 @@
-		/***This Artifact belongs to the Data Migration Jumpstart Engineering Team***/
+		/***This Artifact belongs to the Data SQL Ninja Engineering Team***/
 set nocount on
 
 --Instance setup
