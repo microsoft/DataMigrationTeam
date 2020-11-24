@@ -1,3 +1,12 @@
+<#
+
+PLEASE REVIEW THE GENERATED SCRIPT CAREFULLY BEFORE APPLYING IT TO A PRODUCTION SYSTEM
+Warranty: This script is provided on as "AS IS" basis and there are no warranties, express or implied, including, 
+but not limited to implied warranties of merchantability or fitness for a particular purpose. USE AT YOUR OWN RISK. 
+
+#>
+
+
 $region="westus"
 $vmtypes = Get-AzComputeResourceSku | where {$_.Locations.Contains($region)}
  
