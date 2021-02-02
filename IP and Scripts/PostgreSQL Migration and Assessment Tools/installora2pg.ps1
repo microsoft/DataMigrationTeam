@@ -6,6 +6,7 @@
 # $Author: bpahlawa $
 # $Contributor: vijku $ adkumara
 # This script expects instantclient.zip, instantclient-sdk.zip files to be present in the same folder. Download two files from Oracle website.
+# Before ora2pg on windows can be used please set PATH=%%PATH%%;c:\instantclient
 
 # Parameter to be passed by this program when running as administrator
 param (
