@@ -1,10 +1,11 @@
 ﻿#/***This Artifact belongs to the Data SQL Ninja Engineering Team***/
 # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-# $Id: installora2pg.ps1 17 2019-10-20 10:12:44Z bpahlawa $
-# $Date: 2019-10-20 21:12:44 +1100 (Sun, 20 Oct 2019) $
-# $Revision: 17 $
+# $Id: installora2pg.ps1 17 2021-02-02 10:12:44Z bpahlawa $
+# $Date: 2021-02-02 21:12:44 +1100 (Tue, 02 Feb 2021) $
+# $Revision: 19 $
 # $Author: bpahlawa $
-# 
+# $Contributor: vijku $ adkumara
+# This script expects instantclient.zip, instantclient-sdk.zip files to be present in the same folder. Download two files from Oracle website.
 
 # Parameter to be passed by this program when running as administrator
 param (
@@ -18,7 +19,7 @@ $ora2pgGit="https://github.com/darold/ora2pg.git";
 # temp directory to install ora2pg
 $ora2pgTemp="C:\ora2pgTemp";
 # location to install ORACLE_HOME instant client
-$Global:oraclehome="C:\instantclient_12_2";
+$Global:oraclehome="C:\instantclient";
 # location to write a log file
 $Global:Logfile = "c:\installora2pg.log"
 
@@ -313,8 +314,10 @@ Function Check-OracleClient()
         $sdkoracle = "https://download.oracle.com/otn/nt/instantclient/122010/instantclient-sdk-windows.x64-12.2.0.1.0.zip"
 
         # get the file name
-        $baseoraclezipfile=split-path -path $baseoracle -leaf
-        $sdkoraclezipfile=Split-Path -path $sdkoracle -leaf
+        #$baseoraclezipfile=split-path -path $baseoracle -leaf
+        #$sdkoraclezipfile=Split-Path -path $sdkoracle -leaf
+        $baseoraclezipfile="instantclient.zip"
+        $sdkoraclezipfile="instantclient-sdk.zip"
 		
 		# check if those 2 files are available
         if ( (Test-Path -path "$Global:ScriptDir\$baseoraclezipfile" ) -eq $false -or (Test-Path -path "$Global:ScriptDir\$sdkoraclezipfile" ) -eq $false  )
@@ -493,4 +496,3 @@ Function Install-PerlLib()
 		$null = $Host.UI.RawUI.ReadKey('NoEcho,IncludeKeyDown');
 
 }
-
